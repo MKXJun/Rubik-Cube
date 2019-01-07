@@ -3,6 +3,7 @@
 
 #include <wrl/client.h>
 #include "Effects.h"
+#include <vector>
 
 enum RubikFaceColor {
 	RubikFaceColor_Black,		// 黑色
@@ -41,19 +42,56 @@ public:
 	template<class T>
 	using ComPtr = Microsoft::WRL::ComPtr<T>;
 
+	Rubik();
+
 	// 初始化资源
 	void InitResources(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext);
 	// 立即复原魔方
 	void Reset();
 	// 更新魔方状态
-	void Update();
+	void Update(float dt);
 	// 绘制魔方
 	void Draw(ComPtr<ID3D11DeviceContext> deviceContext, BasicEffect& effect);
+	// 当前是否在进行动画中
+	bool IsLocked() const;
+
+	// 绕X轴旋转魔方
+	void RotateX(int pos, float dTheta, bool isPressed = false);
+	// 绕Y轴旋转魔方
+	void RotateY(int pos, float dTheta, bool isPressed = false);
+	// 绕Z轴旋转魔方
+	void RotateZ(int pos, float dTheta, bool isPressed = false);
+
+	// 设置旋转速度(rad/s)
+	void SetRotationSpeed(float rad);
+
 	// 获取纹理数组
 	ComPtr<ID3D11ShaderResourceView> GetTexArray() const;
+
+private:
+	// 获取需要与当前索引的值进行交换的索引，用于模拟旋转
+	void GetSwapIndexArray(int times, std::vector<DirectX::XMINT2>& outArr1, 
+		std::vector<DirectX::XMINT2>& outArr2) const;
+	// 
+
+	// 获取需要与目标索引块交换的面，用于模拟旋转
+	// srcFace[Y][Z]-->dstFace[Y][Z]
+	RubikFace GetTargetSwapFaceRotationX(RubikFace srcFace, int times) const;
+	// srcFace[Z][X]-->dstFace[Z][X]
+	RubikFace GetTargetSwapFaceRotationY(RubikFace srcFace, int times) const;
+	// srcFace[X][Y]-->dstFace[X][Y]
+	RubikFace GetTargetSwapFaceRotationZ(RubikFace srcFace, int times) const;
+
 private:
 	// 魔方 [X][Y][Z]
 	Cube mCubes[3][3][3];
+
+	// 当前是否鼠标正在拖动
+	bool mIsPressed;
+	// 当前是否有动画在播放
+	bool mIsLocked;
+	// 当前自动旋转的速度
+	float mRotationSpeed;
 
 	// 顶点缓冲区，包含6个面的24个顶点
 	// 索引0-3对应+X面

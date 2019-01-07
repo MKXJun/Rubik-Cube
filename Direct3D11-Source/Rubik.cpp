@@ -18,8 +18,14 @@ DirectX::XMMATRIX Cube::GetWorldMatrix() const
 		XMMatrixTranslation(finalPos.x, finalPos.y, finalPos.z);
 }
 
+Rubik::Rubik()
+	: mRotationSpeed(XM_2PI)
+{
+}
+
 void Rubik::InitResources(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext)
 {
+
 	// 初始化纹理数组
 	mTexArray = CreateDDSTexture2DArrayFromFile(
 		device,
@@ -110,6 +116,9 @@ void Rubik::InitResources(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContex
 
 void Rubik::Reset()
 {
+	mIsLocked = false;
+	mIsPressed = false;
+
 	// 初始化魔方中心位置，用六个面默认填充黑色
 	for (int i = 0; i < 3; ++i)
 		for (int j = 0; j < 3; ++j)
@@ -133,8 +142,8 @@ void Rubik::Reset()
 		}	
 
 	// +Y面为绿色，-Y面为蓝色
-	for (int i = 0; i < 3; ++i)
-		for (int k = 0; k < 3; ++k)
+	for (int k = 0; k < 3; ++k)
+		for (int i = 0; i < 3; ++i)
 		{
 			mCubes[i][2][k].faceColors[RubikFace_PosY] = RubikFaceColor_Green;
 			mCubes[i][0][k].faceColors[RubikFace_NegY] = RubikFaceColor_Blue;
@@ -150,22 +159,67 @@ void Rubik::Reset()
 
 }
 
-void Rubik::Update()
+void Rubik::Update(float dt)
 {
+	if (mIsLocked)
+	{
+		int finishCount = 0;
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				for (int k = 0; k < 3; ++k)
+				{
+					// 令x，y, z轴向旋转角度逐渐归0
+					// x轴
+					float dTheta = (signbit(mCubes[i][j][k].rotation.x) ? -1.0f : 1.0f) * dt * mRotationSpeed;
+					if (fabs(mCubes[i][j][k].rotation.x) < fabs(dTheta))
+					{
+						mCubes[i][j][k].rotation.x = 0.0f;
+						finishCount++;
+					}
+					else
+					{
+						mCubes[i][j][k].rotation.x -= dTheta;
+					}
+					// y轴
+					dTheta = (signbit(mCubes[i][j][k].rotation.y) ? -1.0f : 1.0f) * dt * mRotationSpeed;
+					if (fabs(mCubes[i][j][k].rotation.y) < fabs(dTheta))
+					{
+						mCubes[i][j][k].rotation.y = 0.0f;
+						finishCount++;
+					}
+					else
+					{
+						mCubes[i][j][k].rotation.y -= dTheta;
+					}
+					// x轴
+					dTheta = (signbit(mCubes[i][j][k].rotation.z) ? -1.0f : 1.0f) * dt * mRotationSpeed;
+					if (fabs(mCubes[i][j][k].rotation.z) < fabs(dTheta))
+					{
+						mCubes[i][j][k].rotation.z = 0.0f;
+						finishCount++;
+					}
+					else
+					{
+						mCubes[i][j][k].rotation.z -= dTheta;
+					}
+				}
+			}
+		}
+
+		// 所有方块都结束动画才能解锁
+		if (finishCount == 81)
+			mIsLocked = false;
+	}
 }
 
 void Rubik::Draw(ComPtr<ID3D11DeviceContext> deviceContext, BasicEffect& effect)
 {
-	/*static float rot = 0.0f;
-	rot += 0.0005f;
 	for (int i = 0; i < 3; ++i)
-		for (int k = 0; k < 3; ++k)
-		{
-			mCubes[i][2][k].rotation.y = rot;
-		}*/
-
-	for (int i = 0; i < 3; ++i)
+	{
 		for (int j = 0; j < 3; ++j)
+		{
 			for (int k = 0; k < 3; ++k)
 			{
 				effect.SetWorldMatrix(mCubes[i][j][k].GetWorldMatrix());
@@ -176,9 +230,303 @@ void Rubik::Draw(ComPtr<ID3D11DeviceContext> deviceContext, BasicEffect& effect)
 					deviceContext->DrawIndexed(6, 0, 4 * face);
 				}
 			}
+		}
+	}	
+}
+
+bool Rubik::IsLocked() const
+{
+	return mIsLocked;
+}
+
+void Rubik::RotateX(int pos, float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		for (int j = 0; j < 3; ++j)
+			for (int k = 0; k < 3; ++k)
+				mCubes[pos][j][k].rotation.x += dTheta;
+		mIsPressed = isPressed;
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
+		{
+			mIsLocked = true;
+			
+			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+			int times = static_cast<int>(round(mCubes[pos][0][0].rotation.x / XM_PIDIV2));
+			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+			int minTimes = (times % 4 + 4) % 4;
+	
+			// 调整所有被旋转方块的初始角度
+			for (int j = 0; j < 3; ++j)
+			{
+				for (int k = 0; k < 3; ++k)
+				{
+					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+					// 键盘按下后的变化
+					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
+					{
+						// 顺时针旋转90度--->实际演算从-90度加到0度
+						// 逆时针旋转90度--->实际演算从90度减到0度
+						mCubes[pos][j][k].rotation.x *= -1.0f;
+					}
+					// 鼠标释放后的变化
+					else
+					{
+						// 归位回[-pi/4, pi/4)的区间
+						mCubes[pos][j][k].rotation.x -= times * XM_PIDIV2;
+					}
+				}
+			}
+
+			std::vector<XMINT2> indices1, indices2;
+			GetSwapIndexArray(minTimes, indices1, indices2);
+			size_t swapTimes = indices1.size();
+			for (size_t i = 0; i < swapTimes; ++i)
+			{
+				// 对这两个立方体按规则进行面的交换
+				XMINT2 srcIndex = indices1[i];
+				XMINT2 targetIndex = indices2[i];
+				// 若为2次顺时针旋转，则只需4次对角调换
+				// 否则，需要6次邻角(棱)对换
+				for (int face = 0; face < 6; ++face)
+				{
+					std::swap(mCubes[pos][srcIndex.x][srcIndex.y].faceColors[face],
+						mCubes[pos][targetIndex.x][targetIndex.y].faceColors[
+							GetTargetSwapFaceRotationX(static_cast<RubikFace>(face), minTimes)]);
+				}
+			}
+		}
+			
+	}
+}
+
+void Rubik::RotateY(int pos, float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		for (int k = 0; k < 3; ++k)
+			for (int i = 0; i < 3; ++i)
+				mCubes[i][pos][k].rotation.y += dTheta;
+		mIsPressed = isPressed;
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
+		{
+			mIsLocked = true;
+
+			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+			int times = static_cast<int>(round(mCubes[0][pos][0].rotation.y / XM_PIDIV2));
+			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+			int minTimes = (times % 4 + 4) % 4;
+
+			// 调整所有被旋转方块的初始角度
+			for (int k = 0; k < 3; ++k)
+			{
+				for (int i = 0; i < 3; ++i)
+				{
+					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+					// 键盘按下后的变化
+					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
+					{
+						// 顺时针旋转90度--->实际演算从-90度加到0度
+						// 逆时针旋转90度--->实际演算从90度减到0度
+						mCubes[i][pos][k].rotation.y *= -1.0f;
+					}
+					// 鼠标释放后的变化
+					else
+					{
+						// 归位回[-pi/4, pi/4)的区间
+						mCubes[i][pos][k].rotation.y -= times * XM_PIDIV2;
+					}
+				}
+			}
+
+			std::vector<XMINT2> indices1, indices2;
+			GetSwapIndexArray(minTimes, indices1, indices2);
+			size_t swapTimes = indices1.size();
+			for (size_t i = 0; i < swapTimes; ++i)
+			{
+				// 对这两个立方体按规则进行面的交换
+				XMINT2 srcIndex = indices1[i];
+				XMINT2 targetIndex = indices2[i];
+				// 若为2次顺时针旋转，则只需4次对角调换
+				// 否则，需要6次邻角(棱)对换
+				for (int face = 0; face < 6; ++face)
+				{
+					std::swap(mCubes[srcIndex.y][pos][srcIndex.x].faceColors[face],
+						mCubes[targetIndex.y][pos][targetIndex.x].faceColors[
+							GetTargetSwapFaceRotationY(static_cast<RubikFace>(face), minTimes)]);
+				}
+			}
+		}
+
+	}
+}
+
+void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				mCubes[i][j][pos].rotation.z += dTheta;
+		mIsPressed = isPressed;
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
+		{
+			mIsLocked = true;
+
+			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+			int times = static_cast<int>(round(mCubes[0][0][pos].rotation.z / XM_PIDIV2));
+			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+			int minTimes = (times % 4 + 4) % 4;
+
+			// 调整所有被旋转方块的初始角度
+			for (int i = 0; i < 3; ++i)
+			{
+				for (int j = 0; j < 3; ++j)
+				{
+					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+					// 键盘按下后的变化
+					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
+					{
+						// 顺时针旋转90度--->实际演算从-90度加到0度
+						// 逆时针旋转90度--->实际演算从90度减到0度
+						mCubes[i][j][pos].rotation.z *= -1.0f;
+					}
+					// 鼠标释放后的变化
+					else
+					{
+						// 归位回[-pi/4, pi/4)的区间
+						mCubes[i][j][pos].rotation.z -= times * XM_PIDIV2;
+					}
+				}
+			}
+
+			std::vector<XMINT2> indices1, indices2;
+			GetSwapIndexArray(minTimes, indices1, indices2);
+			size_t swapTimes = indices1.size();
+			for (size_t i = 0; i < swapTimes; ++i)
+			{
+				// 对这两个立方体按规则进行面的交换
+				XMINT2 srcIndex = indices1[i];
+				XMINT2 targetIndex = indices2[i];
+				// 若为2次顺时针旋转，则只需4次对角调换
+				// 否则，需要6次邻角(棱)对换
+				for (int face = 0; face < 6; ++face)
+				{
+					std::swap(mCubes[srcIndex.x][srcIndex.y][pos].faceColors[face],
+						mCubes[targetIndex.x][targetIndex.y][pos].faceColors[
+							GetTargetSwapFaceRotationZ(static_cast<RubikFace>(face), minTimes)]);
+				}
+			}
+		}
+
+	}
+}
+
+void Rubik::SetRotationSpeed(float rad)
+{
+	assert(rad > 0.0f);
+	mRotationSpeed = rad;
 }
 
 ComPtr<ID3D11ShaderResourceView> Rubik::GetTexArray() const
 {
 	return mTexArray;
+}
+
+void Rubik::GetSwapIndexArray(int minTimes, std::vector<DirectX::XMINT2>& outArr1, std::vector<DirectX::XMINT2>& outArr2) const
+{
+	// 进行一次顺时针90度旋转相当逆时针交换6次(顶角和棱各3次)
+	// 1   2   4   2   4   2   4   1
+	//   *   ->  *   ->  *   ->  *
+	// 4   3   1   3   3   1   3   2
+	if (minTimes == 1)
+	{
+		outArr1 = { XMINT2(0, 0), XMINT2(0, 1), XMINT2(0, 2), XMINT2(1, 2), XMINT2(2, 2), XMINT2(2, 1) };
+		outArr2 = { XMINT2(0, 2), XMINT2(1, 2), XMINT2(2, 2), XMINT2(2, 1), XMINT2(2, 0), XMINT2(1, 0) };
+	}
+	// 进行一次顺时针90度旋转相当逆时针交换4次(顶角和棱各2次)
+	// 1   2   3   2   3   4
+	//   *   ->  *   ->  *  
+	// 4   3   4   1   2   1
+	else if (minTimes == 2)
+	{
+		outArr1 = { XMINT2(0, 0), XMINT2(0, 1), XMINT2(0, 2), XMINT2(1, 2) };
+		outArr2 = { XMINT2(2, 2), XMINT2(2, 1), XMINT2(2, 0), XMINT2(1, 0) };
+	}
+	// 进行一次顺时针90度旋转相当逆时针交换6次(顶角和棱各3次)
+	// 1   2   4   2   4   2   4   1
+	//   *   ->  *   ->  *   ->  *
+	// 4   3   1   3   3   1   3   2
+	else if (minTimes == 3)
+	{
+		outArr1 = { XMINT2(0, 0), XMINT2(1, 0), XMINT2(2, 0), XMINT2(2, 1), XMINT2(2, 2), XMINT2(1, 2) };
+		outArr2 = { XMINT2(2, 0), XMINT2(2, 1), XMINT2(2, 2), XMINT2(1, 2), XMINT2(0, 2), XMINT2(0, 1) };
+	}
+	// 0次顺时针旋转不变，其余异常数值也不变
+	else
+	{
+		outArr1.clear();
+		outArr2.clear();
+	}
+	
+}
+
+RubikFace Rubik::GetTargetSwapFaceRotationX(RubikFace srcFace, int times) const
+{
+	RubikFace targetFace = srcFace;
+	if (targetFace == RubikFace_PosX || targetFace == RubikFace_NegX)
+		return targetFace;
+	while (times--)
+	{
+		switch (targetFace)
+		{
+		case RubikFace_PosY: targetFace = RubikFace_NegZ; break;
+		case RubikFace_PosZ: targetFace = RubikFace_PosY; break;
+		case RubikFace_NegY: targetFace = RubikFace_PosZ; break;
+		case RubikFace_NegZ: targetFace = RubikFace_NegY; break;
+		}
+	}
+	return targetFace;
+}
+
+RubikFace Rubik::GetTargetSwapFaceRotationY(RubikFace srcFace, int times) const
+{
+	RubikFace targetFace = srcFace;
+	if (targetFace == RubikFace_PosY || targetFace == RubikFace_NegY)
+		return targetFace;
+	while (times--)
+	{
+		switch (targetFace)
+		{
+		case RubikFace_PosZ: targetFace = RubikFace_NegX; break;
+		case RubikFace_PosX: targetFace = RubikFace_PosZ; break;
+		case RubikFace_NegZ: targetFace = RubikFace_PosX; break;
+		case RubikFace_NegX: targetFace = RubikFace_NegZ; break;
+		}
+	}
+	return targetFace;
+}
+
+RubikFace Rubik::GetTargetSwapFaceRotationZ(RubikFace srcFace, int times) const
+{
+	RubikFace targetFace = srcFace;
+	if (targetFace == RubikFace_PosZ || targetFace == RubikFace_NegZ)
+		return targetFace;
+	while (times--)
+	{
+		switch (targetFace)
+		{
+		case RubikFace_PosX: targetFace = RubikFace_NegY; break;
+		case RubikFace_PosY: targetFace = RubikFace_PosX; break;
+		case RubikFace_NegX: targetFace = RubikFace_PosY; break;
+		case RubikFace_NegY: targetFace = RubikFace_NegX; break;
+		}
+	}
+	return targetFace;
 }

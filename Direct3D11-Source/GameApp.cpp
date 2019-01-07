@@ -84,6 +84,16 @@ void GameApp::UpdateScene(float dt)
 	Keyboard::State keyState = mKeyboard->GetState();
 	mKeyboardTracker.Update(keyState);
 
+	// 反复旋转
+	static float theta = XM_PIDIV2;
+	if (!mRubik.IsLocked())
+	{
+		mRubik.RotateZ(0, theta);
+		theta *= -1.0f;
+	}
+
+	mRubik.Update(dt);
+
 	// 重置滚轮值
 	mMouse->ResetScrollWheelValue();
 	
@@ -124,7 +134,6 @@ bool GameApp::InitResource()
 {
 	// 初始化魔方
 	mRubik.InitResources(md3dDevice, md3dImmediateContext);
-	
 	// 初始化特效、着色器资源
 	mBasicEffect.SetRenderDefault(md3dImmediateContext);
 	mBasicEffect.SetViewMatrix(XMMatrixLookAtLH(
