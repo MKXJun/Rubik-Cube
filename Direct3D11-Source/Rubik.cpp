@@ -232,6 +232,105 @@ bool Rubik::IsLocked() const
 	return mIsLocked;
 }
 
+void Rubik::RotateX(float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		// 更新旋转状态
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				for (int k = 0; k < 3; ++k)
+					mCubes[i][j][k].rotation.x += dTheta;
+
+		// 鼠标或键盘操作完成
+		if (!isPressed)
+		{
+
+			// 开始动画演示状态
+			mIsPressed = false;
+			mIsLocked = true;
+
+			// 进行预旋转
+			PreRotateX(isKeyOp);
+		}
+	}
+}
+
+void Rubik::RotateY(float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		// 更新旋转状态
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				for (int k = 0; k < 3; ++k)
+					mCubes[i][j][k].rotation.y += dTheta;
+
+		// 鼠标或键盘操作完成
+		if (!isPressed)
+		{
+
+			// 开始动画演示状态
+			mIsPressed = false;
+			mIsLocked = true;
+
+			// 进行预旋转
+			PreRotateY(isKeyOp);
+		}
+	}
+}
+
+void Rubik::RotateZ(float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		// 更新旋转状态
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				for (int k = 0; k < 3; ++k)
+					mCubes[i][j][k].rotation.z += dTheta;
+
+		// 鼠标或键盘操作完成
+		if (!isPressed)
+		{
+
+			// 开始动画演示状态
+			mIsPressed = false;
+			mIsLocked = true;
+
+			// 进行预旋转
+			PreRotateZ(isKeyOp);
+		}
+	}
+}
+
 void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 {
 	if (!mIsLocked)
@@ -258,50 +357,8 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 			mIsPressed = false;
 			mIsLocked = true;
 			
-			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
-			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
-			int times = static_cast<int>(round(mCubes[pos][0][0].rotation.x / XM_PIDIV2));
-			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
-			int minTimes = (times % 4 + 4) % 4;
-	
-			// 调整所有被旋转方块的初始角度
-			for (int j = 0; j < 3; ++j)
-			{
-				for (int k = 0; k < 3; ++k)
-				{
-					// 键盘按下后的变化
-					if (isKeyOp)
-					{
-						// 顺时针旋转90度--->实际演算从-90度加到0度
-						// 逆时针旋转90度--->实际演算从90度减到0度
-						mCubes[pos][j][k].rotation.x *= -1.0f;
-					}
-					// 鼠标释放后的变化
-					else
-					{
-						// 归位回[-pi/4, pi/4)的区间
-						mCubes[pos][j][k].rotation.x -= times * XM_PIDIV2;
-					}
-				}
-			}
-
-			std::vector<XMINT2> indices1, indices2;
-			GetSwapIndexArray(minTimes, indices1, indices2);
-			size_t swapTimes = indices1.size();
-			for (size_t i = 0; i < swapTimes; ++i)
-			{
-				// 对这两个立方体按规则进行面的交换
-				XMINT2 srcIndex = indices1[i];
-				XMINT2 targetIndex = indices2[i];
-				// 若为2次顺时针旋转，则只需4次对角调换
-				// 否则，需要6次邻角(棱)对换
-				for (int face = 0; face < 6; ++face)
-				{
-					std::swap(mCubes[pos][srcIndex.x][srcIndex.y].faceColors[face],
-						mCubes[pos][targetIndex.x][targetIndex.y].faceColors[
-							GetTargetSwapFaceRotationX(static_cast<RubikFace>(face), minTimes)]);
-				}
-			}
+			// 进行预旋转
+			PreRotateX(isKeyOp);
 		}
 	}
 }
@@ -330,51 +387,8 @@ void Rubik::RotateY(int pos, float dTheta, bool isPressed)
 			mIsPressed = false;
 			mIsLocked = true;
 
-			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
-			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
-			int times = static_cast<int>(round(mCubes[0][pos][0].rotation.y / XM_PIDIV2));
-			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
-			int minTimes = (times % 4 + 4) % 4;
-
-			// 调整所有被旋转方块的初始角度
-			for (int k = 0; k < 3; ++k)
-			{
-				for (int i = 0; i < 3; ++i)
-				{
-					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-					// 键盘按下后的变化
-					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
-					{
-						// 顺时针旋转90度--->实际演算从-90度加到0度
-						// 逆时针旋转90度--->实际演算从90度减到0度
-						mCubes[i][pos][k].rotation.y *= -1.0f;
-					}
-					// 鼠标释放后的变化
-					else
-					{
-						// 归位回[-pi/4, pi/4)的区间
-						mCubes[i][pos][k].rotation.y -= times * XM_PIDIV2;
-					}
-				}
-			}
-
-			std::vector<XMINT2> indices1, indices2;
-			GetSwapIndexArray(minTimes, indices1, indices2);
-			size_t swapTimes = indices1.size();
-			for (size_t i = 0; i < swapTimes; ++i)
-			{
-				// 对这两个立方体按规则进行面的交换
-				XMINT2 srcIndex = indices1[i];
-				XMINT2 targetIndex = indices2[i];
-				// 若为2次顺时针旋转，则只需4次对角调换
-				// 否则，需要6次邻角(棱)对换
-				for (int face = 0; face < 6; ++face)
-				{
-					std::swap(mCubes[srcIndex.y][pos][srcIndex.x].faceColors[face],
-						mCubes[targetIndex.y][pos][targetIndex.x].faceColors[
-							GetTargetSwapFaceRotationY(static_cast<RubikFace>(face), minTimes)]);
-				}
-			}
+			// 进行预旋转
+			PreRotateY(isKeyOp);
 		}
 	}
 }
@@ -403,51 +417,8 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 			mIsPressed = false;
 			mIsLocked = true;
 
-			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
-			// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
-			int times = static_cast<int>(round(mCubes[0][0][pos].rotation.z / XM_PIDIV2));
-			// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
-			int minTimes = (times % 4 + 4) % 4;
-
-			// 调整所有被旋转方块的初始角度
-			for (int i = 0; i < 3; ++i)
-			{
-				for (int j = 0; j < 3; ++j)
-				{
-					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-					// 键盘按下后的变化
-					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
-					{
-						// 顺时针旋转90度--->实际演算从-90度加到0度
-						// 逆时针旋转90度--->实际演算从90度减到0度
-						mCubes[i][j][pos].rotation.z *= -1.0f;
-					}
-					// 鼠标释放后的变化
-					else
-					{
-						// 归位回[-pi/4, pi/4)的区间
-						mCubes[i][j][pos].rotation.z -= times * XM_PIDIV2;
-					}
-				}
-			}
-
-			std::vector<XMINT2> indices1, indices2;
-			GetSwapIndexArray(minTimes, indices1, indices2);
-			size_t swapTimes = indices1.size();
-			for (size_t i = 0; i < swapTimes; ++i)
-			{
-				// 对这两个立方体按规则进行面的交换
-				XMINT2 srcIndex = indices1[i];
-				XMINT2 targetIndex = indices2[i];
-				// 若为2次顺时针旋转，则只需4次对角调换
-				// 否则，需要6次邻角(棱)对换
-				for (int face = 0; face < 6; ++face)
-				{
-					std::swap(mCubes[srcIndex.x][srcIndex.y][pos].faceColors[face],
-						mCubes[targetIndex.x][targetIndex.y][pos].faceColors[
-							GetTargetSwapFaceRotationZ(static_cast<RubikFace>(face), minTimes)]);
-				}
-			}
+			// 进行预旋转
+			PreRotateZ(dTheta);
 		}
 	}
 }
@@ -461,6 +432,171 @@ void Rubik::SetRotationSpeed(float rad)
 ComPtr<ID3D11ShaderResourceView> Rubik::GetTexArray() const
 {
 	return mTexArray;
+}
+
+void Rubik::PreRotateX(bool isKeyOp)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		// 当前层没有旋转则直接跳过
+		if (fabs(mCubes[i][0][0].rotation.x) < 10e-5f)
+			continue;
+		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+		// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+		int times = static_cast<int>(round(mCubes[i][0][0].rotation.x / XM_PIDIV2));
+		// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+		int minTimes = (times % 4 + 4) % 4;
+
+		// 调整所有被旋转方块的初始角度
+		for (int j = 0; j < 3; ++j)
+		{
+			for (int k = 0; k < 3; ++k)
+			{
+				// 键盘按下后的变化
+				if (isKeyOp)
+				{
+					// 顺时针旋转90度--->实际演算从-90度加到0度
+					// 逆时针旋转90度--->实际演算从90度减到0度
+					mCubes[i][j][k].rotation.x *= -1.0f;
+				}
+				// 鼠标释放后的变化
+				else
+				{
+					// 归位回[-pi/4, pi/4)的区间
+					mCubes[i][j][k].rotation.x -= times * XM_PIDIV2;
+				}
+			}
+		}
+
+		std::vector<XMINT2> indices1, indices2;
+		GetSwapIndexArray(minTimes, indices1, indices2);
+		size_t swapTimes = indices1.size();
+		for (size_t idx = 0; idx < swapTimes; ++idx)
+		{
+			// 对这两个立方体按规则进行面的交换
+			XMINT2 srcIndex = indices1[idx];
+			XMINT2 targetIndex = indices2[idx];
+			// 若为2次顺时针旋转，则只需4次对角调换
+			// 否则，需要6次邻角(棱)对换
+			for (int face = 0; face < 6; ++face)
+			{
+				std::swap(mCubes[i][srcIndex.x][srcIndex.y].faceColors[face],
+					mCubes[i][targetIndex.x][targetIndex.y].faceColors[
+						GetTargetSwapFaceRotationX(static_cast<RubikFace>(face), minTimes)]);
+			}
+		}
+	}
+}
+
+void Rubik::PreRotateY(bool isKeyOp)
+{
+	for (int j = 0; j < 3; ++j)
+	{
+		// 当前层没有旋转则直接跳过
+		if (fabs(mCubes[0][j][0].rotation.y) < 10e-5f)
+			continue;
+		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+		// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+		int times = static_cast<int>(round(mCubes[0][j][0].rotation.y / XM_PIDIV2));
+		// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+		int minTimes = (times % 4 + 4) % 4;
+
+		// 调整所有被旋转方块的初始角度
+		for (int k = 0; k < 3; ++k)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+				// 键盘按下后的变化
+				if (isKeyOp)
+				{
+					// 顺时针旋转90度--->实际演算从-90度加到0度
+					// 逆时针旋转90度--->实际演算从90度减到0度
+					mCubes[i][j][k].rotation.y *= -1.0f;
+				}
+				// 鼠标释放后的变化
+				else
+				{
+					// 归位回[-pi/4, pi/4)的区间
+					mCubes[i][j][k].rotation.y -= times * XM_PIDIV2;
+				}
+			}
+		}
+
+		std::vector<XMINT2> indices1, indices2;
+		GetSwapIndexArray(minTimes, indices1, indices2);
+		size_t swapTimes = indices1.size();
+		for (size_t idx = 0; idx < swapTimes; ++idx)
+		{
+			// 对这两个立方体按规则进行面的交换
+			XMINT2 srcIndex = indices1[idx];
+			XMINT2 targetIndex = indices2[idx];
+			// 若为2次顺时针旋转，则只需4次对角调换
+			// 否则，需要6次邻角(棱)对换
+			for (int face = 0; face < 6; ++face)
+			{
+				std::swap(mCubes[srcIndex.y][j][srcIndex.x].faceColors[face],
+					mCubes[targetIndex.y][j][targetIndex.x].faceColors[
+						GetTargetSwapFaceRotationY(static_cast<RubikFace>(face), minTimes)]);
+			}
+		}
+	}
+}
+
+void Rubik::PreRotateZ(bool isKeyOp)
+{
+	for (int k = 0; k < 3; ++k)
+	{
+		// 当前层没有旋转则直接跳过
+		if (fabs(mCubes[0][0][k].rotation.z) < 10e-5f)
+			continue;
+
+		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
+		// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
+		int times = static_cast<int>(round(mCubes[0][0][k].rotation.z / XM_PIDIV2));
+		// 将归位次数映射到[0, 3]，以计算最小所需顺时针旋转90度的次数
+		int minTimes = (times % 4 + 4) % 4;
+
+		// 调整所有被旋转方块的初始角度
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+				// 键盘按下后的变化
+				if (isKeyOp)
+				{
+					// 顺时针旋转90度--->实际演算从-90度加到0度
+					// 逆时针旋转90度--->实际演算从90度减到0度
+					mCubes[i][j][k].rotation.z *= -1.0f;
+				}
+				// 鼠标释放后的变化
+				else
+				{
+					// 归位回[-pi/4, pi/4)的区间
+					mCubes[i][j][k].rotation.z -= times * XM_PIDIV2;
+				}
+			}
+		}
+
+		std::vector<XMINT2> indices1, indices2;
+		GetSwapIndexArray(minTimes, indices1, indices2);
+		size_t swapTimes = indices1.size();
+		for (size_t idx = 0; idx < swapTimes; ++idx)
+		{
+			// 对这两个立方体按规则进行面的交换
+			XMINT2 srcIndex = indices1[idx];
+			XMINT2 targetIndex = indices2[idx];
+			// 若为2次顺时针旋转，则只需4次对角调换
+			// 否则，需要6次邻角(棱)对换
+			for (int face = 0; face < 6; ++face)
+			{
+				std::swap(mCubes[srcIndex.x][srcIndex.y][k].faceColors[face],
+					mCubes[targetIndex.x][targetIndex.y][k].faceColors[
+						GetTargetSwapFaceRotationZ(static_cast<RubikFace>(face), minTimes)]);
+			}
+		}
+	}
 }
 
 void Rubik::GetSwapIndexArray(int minTimes, std::vector<DirectX::XMINT2>& outArr1, std::vector<DirectX::XMINT2>& outArr2) const

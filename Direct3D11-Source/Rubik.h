@@ -55,6 +55,13 @@ public:
 	// 当前是否在进行动画中
 	bool IsLocked() const;
 
+	// 绕X轴旋转整个魔方
+	void RotateX(float dTheta, bool isPressed = false);
+	// 绕X轴旋转整个魔方
+	void RotateY(float dTheta, bool isPressed = false);
+	// 绕X轴旋转整个魔方
+	void RotateZ(float dTheta, bool isPressed = false);
+
 	// 绕X轴旋转魔方某一层
 	void RotateX(int pos, float dTheta, bool isPressed = false);
 	// 绕Y轴旋转魔方某一层
@@ -69,6 +76,13 @@ public:
 	ComPtr<ID3D11ShaderResourceView> GetTexArray() const;
 
 private:
+	// 绕X轴的预旋转
+	void PreRotateX(bool isKeyOp);
+	// 绕Y轴的预旋转
+	void PreRotateY(bool isKeyOp);
+	// 绕Z轴的预旋转
+	void PreRotateZ(bool isKeyOp);
+
 	// 获取需要与当前索引的值进行交换的索引，用于模拟旋转
 	// outArr1 { [X1][Y1] [X2][Y2] ... }
 	//              ||       ||
