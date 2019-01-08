@@ -55,11 +55,11 @@ public:
 	// 当前是否在进行动画中
 	bool IsLocked() const;
 
-	// 绕X轴旋转魔方
+	// 绕X轴旋转魔方某一层
 	void RotateX(int pos, float dTheta, bool isPressed = false);
-	// 绕Y轴旋转魔方
+	// 绕Y轴旋转魔方某一层
 	void RotateY(int pos, float dTheta, bool isPressed = false);
-	// 绕Z轴旋转魔方
+	// 绕Z轴旋转魔方某一层
 	void RotateZ(int pos, float dTheta, bool isPressed = false);
 
 	// 设置旋转速度(rad/s)
@@ -70,17 +70,21 @@ public:
 
 private:
 	// 获取需要与当前索引的值进行交换的索引，用于模拟旋转
+	// outArr1 { [X1][Y1] [X2][Y2] ... }
+	//              ||       ||
+	// outArr2 { [X1][Y1] [X2][Y2] ... }
 	void GetSwapIndexArray(int times, std::vector<DirectX::XMINT2>& outArr1, 
 		std::vector<DirectX::XMINT2>& outArr2) const;
-	// 
 
-	// 获取需要与目标索引块交换的面，用于模拟旋转
-	// srcFace[Y][Z]-->dstFace[Y][Z]
-	RubikFace GetTargetSwapFaceRotationX(RubikFace srcFace, int times) const;
-	// srcFace[Z][X]-->dstFace[Z][X]
-	RubikFace GetTargetSwapFaceRotationY(RubikFace srcFace, int times) const;
-	// srcFace[X][Y]-->dstFace[X][Y]
-	RubikFace GetTargetSwapFaceRotationZ(RubikFace srcFace, int times) const;
+	// 获取绕X轴旋转的情况下需要与目标索引块交换的面，用于模拟旋转
+	// cube[][Y][Z].face1 <--> cube[][Y][Z].face2
+	RubikFace GetTargetSwapFaceRotationX(RubikFace face, int times) const;
+	// 获取绕Y轴旋转的情况下需要与目标索引块交换的面，用于模拟旋转
+	// cube[X][][Z].face1 <--> cube[X][][Z].face2
+	RubikFace GetTargetSwapFaceRotationY(RubikFace face, int times) const;
+	// 获取绕Z轴旋转的情况下需要与目标索引块交换的面，用于模拟旋转
+	// cube[X][Y][].face1 <--> cube[X][Y][].face2
+	RubikFace GetTargetSwapFaceRotationZ(RubikFace face, int times) const;
 
 private:
 	// 魔方 [X][Y][Z]

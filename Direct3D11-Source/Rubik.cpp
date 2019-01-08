@@ -9,8 +9,10 @@ using namespace Microsoft::WRL;
 DirectX::XMMATRIX Cube::GetWorldMatrix() const
 {
 	XMVECTOR posVec = XMLoadFloat3(&pos);
+	// rotation必然最多只有一个分量是非0，保证其只会绕其中一个轴进行旋转
 	XMMATRIX R = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
 	posVec = XMVector3TransformCoord(posVec, R);
+	// 立方体转动后最终的位置
 	XMFLOAT3 finalPos;
 	XMStoreFloat3(&finalPos, posVec);
 
@@ -131,31 +133,22 @@ void Rubik::Reset()
 					sizeof mCubes[i][j][k].faceColors);
 			}
 	
-	
-
 	// +X面为橙色，-X面为红色
-	for (int j = 0; j < 3; ++j)
-		for (int k = 0; k < 3; ++k)
-		{
-			mCubes[2][j][k].faceColors[RubikFace_PosX] = RubikFaceColor_Orange;
-			mCubes[0][j][k].faceColors[RubikFace_NegX] = RubikFaceColor_Red;
-		}	
-
 	// +Y面为绿色，-Y面为蓝色
-	for (int k = 0; k < 3; ++k)
-		for (int i = 0; i < 3; ++i)
-		{
-			mCubes[i][2][k].faceColors[RubikFace_PosY] = RubikFaceColor_Green;
-			mCubes[i][0][k].faceColors[RubikFace_NegY] = RubikFaceColor_Blue;
-		}
-
 	// +Z面为黄色，-Z面为白色
 	for (int i = 0; i < 3; ++i)
 		for (int j = 0; j < 3; ++j)
 		{
+			mCubes[2][i][j].faceColors[RubikFace_PosX] = RubikFaceColor_Orange;
+			mCubes[0][i][j].faceColors[RubikFace_NegX] = RubikFaceColor_Red;
+
+			mCubes[j][2][i].faceColors[RubikFace_PosY] = RubikFaceColor_Green;
+			mCubes[j][0][i].faceColors[RubikFace_NegY] = RubikFaceColor_Blue;
+
 			mCubes[i][j][2].faceColors[RubikFace_PosZ] = RubikFaceColor_Yellow;
 			mCubes[i][j][0].faceColors[RubikFace_NegZ] = RubikFaceColor_White;
-		}
+		}	
+
 
 }
 
@@ -243,13 +236,26 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 {
 	if (!mIsLocked)
 	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		// 更新旋转状态
 		for (int j = 0; j < 3; ++j)
 			for (int k = 0; k < 3; ++k)
 				mCubes[pos][j][k].rotation.x += dTheta;
-		mIsPressed = isPressed;
+
 		// 鼠标或键盘操作完成
-		if (!mIsPressed)
+		if (!isPressed)
 		{
+			
+			// 开始动画演示状态
+			mIsPressed = false;
 			mIsLocked = true;
 			
 			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
@@ -263,9 +269,8 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 			{
 				for (int k = 0; k < 3; ++k)
 				{
-					// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 					// 键盘按下后的变化
-					if (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f)
+					if (isKeyOp)
 					{
 						// 顺时针旋转90度--->实际演算从-90度加到0度
 						// 逆时针旋转90度--->实际演算从90度减到0度
@@ -298,7 +303,6 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 				}
 			}
 		}
-			
 	}
 }
 
@@ -306,13 +310,24 @@ void Rubik::RotateY(int pos, float dTheta, bool isPressed)
 {
 	if (!mIsLocked)
 	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
 		for (int k = 0; k < 3; ++k)
 			for (int i = 0; i < 3; ++i)
 				mCubes[i][pos][k].rotation.y += dTheta;
-		mIsPressed = isPressed;
+
 		// 鼠标或键盘操作完成
-		if (!mIsPressed)
+		if (!isPressed)
 		{
+			// 开始动画演示状态
+			mIsPressed = false;
 			mIsLocked = true;
 
 			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
@@ -361,7 +376,6 @@ void Rubik::RotateY(int pos, float dTheta, bool isPressed)
 				}
 			}
 		}
-
 	}
 }
 
@@ -369,13 +383,24 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 {
 	if (!mIsLocked)
 	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
 		for (int i = 0; i < 3; ++i)
 			for (int j = 0; j < 3; ++j)
 				mCubes[i][j][pos].rotation.z += dTheta;
-		mIsPressed = isPressed;
+
 		// 鼠标或键盘操作完成
-		if (!mIsPressed)
+		if (!isPressed)
 		{
+			// 开始动画演示状态
+			mIsPressed = false;
 			mIsLocked = true;
 
 			// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
@@ -424,7 +449,6 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 				}
 			}
 		}
-
 	}
 }
 
@@ -477,56 +501,53 @@ void Rubik::GetSwapIndexArray(int minTimes, std::vector<DirectX::XMINT2>& outArr
 	
 }
 
-RubikFace Rubik::GetTargetSwapFaceRotationX(RubikFace srcFace, int times) const
+RubikFace Rubik::GetTargetSwapFaceRotationX(RubikFace face, int times) const
 {
-	RubikFace targetFace = srcFace;
-	if (targetFace == RubikFace_PosX || targetFace == RubikFace_NegX)
-		return targetFace;
+	if (face == RubikFace_PosX || face == RubikFace_NegX)
+		return face;
 	while (times--)
 	{
-		switch (targetFace)
+		switch (face)
 		{
-		case RubikFace_PosY: targetFace = RubikFace_NegZ; break;
-		case RubikFace_PosZ: targetFace = RubikFace_PosY; break;
-		case RubikFace_NegY: targetFace = RubikFace_PosZ; break;
-		case RubikFace_NegZ: targetFace = RubikFace_NegY; break;
+		case RubikFace_PosY: face = RubikFace_NegZ; break;
+		case RubikFace_PosZ: face = RubikFace_PosY; break;
+		case RubikFace_NegY: face = RubikFace_PosZ; break;
+		case RubikFace_NegZ: face = RubikFace_NegY; break;
 		}
 	}
-	return targetFace;
+	return face;
 }
 
-RubikFace Rubik::GetTargetSwapFaceRotationY(RubikFace srcFace, int times) const
+RubikFace Rubik::GetTargetSwapFaceRotationY(RubikFace face, int times) const
 {
-	RubikFace targetFace = srcFace;
-	if (targetFace == RubikFace_PosY || targetFace == RubikFace_NegY)
-		return targetFace;
+	if (face == RubikFace_PosY || face == RubikFace_NegY)
+		return face;
 	while (times--)
 	{
-		switch (targetFace)
+		switch (face)
 		{
-		case RubikFace_PosZ: targetFace = RubikFace_NegX; break;
-		case RubikFace_PosX: targetFace = RubikFace_PosZ; break;
-		case RubikFace_NegZ: targetFace = RubikFace_PosX; break;
-		case RubikFace_NegX: targetFace = RubikFace_NegZ; break;
+		case RubikFace_PosZ: face = RubikFace_NegX; break;
+		case RubikFace_PosX: face = RubikFace_PosZ; break;
+		case RubikFace_NegZ: face = RubikFace_PosX; break;
+		case RubikFace_NegX: face = RubikFace_NegZ; break;
 		}
 	}
-	return targetFace;
+	return face;
 }
 
-RubikFace Rubik::GetTargetSwapFaceRotationZ(RubikFace srcFace, int times) const
+RubikFace Rubik::GetTargetSwapFaceRotationZ(RubikFace face, int times) const
 {
-	RubikFace targetFace = srcFace;
-	if (targetFace == RubikFace_PosZ || targetFace == RubikFace_NegZ)
-		return targetFace;
+	if (face == RubikFace_PosZ || face == RubikFace_NegZ)
+		return face;
 	while (times--)
 	{
-		switch (targetFace)
+		switch (face)
 		{
-		case RubikFace_PosX: targetFace = RubikFace_NegY; break;
-		case RubikFace_PosY: targetFace = RubikFace_PosX; break;
-		case RubikFace_NegX: targetFace = RubikFace_PosY; break;
-		case RubikFace_NegY: targetFace = RubikFace_NegX; break;
+		case RubikFace_PosX: face = RubikFace_NegY; break;
+		case RubikFace_PosY: face = RubikFace_PosX; break;
+		case RubikFace_NegX: face = RubikFace_PosY; break;
+		case RubikFace_NegY: face = RubikFace_NegX; break;
 		}
 	}
-	return targetFace;
+	return face;
 }

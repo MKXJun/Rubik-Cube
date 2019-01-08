@@ -88,10 +88,13 @@ void GameApp::UpdateScene(float dt)
 	static float theta = XM_PIDIV2;
 	if (!mRubik.IsLocked())
 	{
-		mRubik.RotateZ(0, theta);
 		theta *= -1.0f;
 	}
-
+	// 就算摆出来也不会有问题(上锁测试)
+	mRubik.RotateY(0, theta);
+	mRubik.RotateX(0, theta);
+	mRubik.RotateX(0, theta);
+	// 更新魔方
 	mRubik.Update(dt);
 
 	// 重置滚轮值
