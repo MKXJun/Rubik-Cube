@@ -186,7 +186,7 @@ void Rubik::Update(float dt)
 					{
 						mCubes[i][j][k].rotation.y -= dTheta;
 					}
-					// x÷·
+					// z÷·
 					dTheta = (signbit(mCubes[i][j][k].rotation.z) ? -1.0f : 1.0f) * dt * mRotationSpeed;
 					if (fabs(mCubes[i][j][k].rotation.z) < fabs(dTheta))
 					{

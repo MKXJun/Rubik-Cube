@@ -90,10 +90,11 @@ void GameApp::UpdateScene(float dt)
 	{
 		theta *= -1.0f;
 	}
-	// 就算摆出来也不会有问题(上锁测试)
+	// 就算摆出来也不会有问题(只有未上锁的帧才会生效该调用)
 	mRubik.RotateY(0, theta);
+	// 下面的也不会被调用
 	mRubik.RotateX(0, theta);
-	mRubik.RotateX(0, theta);
+	mRubik.RotateZ(0, theta);
 	// 更新魔方
 	mRubik.Update(dt);
 
