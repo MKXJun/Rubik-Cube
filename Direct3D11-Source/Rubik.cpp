@@ -269,7 +269,7 @@ void Rubik::RotateX(float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -302,7 +302,7 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -312,7 +312,20 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 		// 更新旋转状态
 		for (int j = 0; j < 3; ++j)
 			for (int k = 0; k < 3; ++k)
-				mCubes[pos][j][k].rotation.x += dTheta;
+			{
+				switch (pos)
+				{
+				case -1: mCubes[0][j][k].rotation.x += dTheta; 
+					mCubes[1][j][k].rotation.x += dTheta; 
+					break;
+				case -2: mCubes[1][j][k].rotation.x += dTheta;
+					mCubes[2][j][k].rotation.x += dTheta;
+					break;
+				default: mCubes[pos][j][k].rotation.x += dTheta;
+				}
+				
+			}
+				
 
 		// 鼠标或键盘操作完成
 		if (!mIsPressed)
@@ -335,7 +348,7 @@ void Rubik::RotateY(float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -368,14 +381,27 @@ void Rubik::RotateY(int pos, float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
 
+		
+
 		for (int k = 0; k < 3; ++k)
 			for (int i = 0; i < 3; ++i)
-				mCubes[i][pos][k].rotation.y += dTheta;
+			{
+				switch (pos)
+				{
+				case -1: mCubes[i][0][k].rotation.y += dTheta;
+					mCubes[i][1][k].rotation.y += dTheta;
+					break;
+				case -2: mCubes[i][1][k].rotation.y += dTheta;
+					mCubes[i][2][k].rotation.y += dTheta;
+					break;
+				default: mCubes[i][pos][k].rotation.y += dTheta;
+				}
+			}
 
 		mIsPressed = isPressed;
 
@@ -399,7 +425,7 @@ void Rubik::RotateZ(float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -433,7 +459,7 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
 		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (!isPressed && mIsPressed && isKeyOp)
+		if (mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -442,7 +468,20 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 
 		for (int i = 0; i < 3; ++i)
 			for (int j = 0; j < 3; ++j)
-				mCubes[i][j][pos].rotation.z += dTheta;
+			{
+				switch (pos)
+				{
+				case -1: mCubes[i][j][0].rotation.z += dTheta;
+					mCubes[i][j][1].rotation.z += dTheta;
+					break;
+				case -2: mCubes[i][j][1].rotation.z += dTheta;
+					mCubes[i][j][2].rotation.z += dTheta;
+					break;
+				default: mCubes[i][j][pos].rotation.z += dTheta;
+				}
+			}
+
+				
 
 		// 鼠标或键盘操作完成
 		if (!mIsPressed)

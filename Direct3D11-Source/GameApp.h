@@ -20,7 +20,7 @@ public:
 private:
 	bool InitResource();
 
-	void KeyInput(float dt);
+	void KeyInput();
 	void MouseInput(float dt);
 
 private:

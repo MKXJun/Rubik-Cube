@@ -68,17 +68,23 @@ public:
 
 	// 绕X轴旋转整个魔方
 	void RotateX(float dTheta, bool isPressed = false);
-	// 绕X轴旋转魔方某一层
+	// pos的取值为0-2时，绕X轴旋转魔方指定层 
+	// pos的取值为-1时，绕X轴旋转魔方pos为0和1的两层
+	// pos的取值为-2时，绕X轴旋转魔方pos为1和2的两层
 	void RotateX(int pos, float dTheta, bool isPressed = false);
 
 	// 绕Y轴旋转整个魔方
 	void RotateY(float dTheta, bool isPressed = false);
-	// 绕Y轴旋转魔方某一层
+	// pos的取值为0-2时，绕Y轴旋转魔方指定层 
+	// pos的取值为-1时，绕Y轴旋转魔方pos为0和1的两层
+	// pos的取值为-2时，绕Y轴旋转魔方pos为1和2的两层
 	void RotateY(int pos, float dTheta, bool isPressed = false);
 
 	// 绕Z轴旋转整个魔方
 	void RotateZ(float dTheta, bool isPressed = false);
-	// 绕Z轴旋转魔方某一层
+	// pos的取值为0-2时，绕Z轴旋转魔方指定层 
+	// pos的取值为-1时，绕Z轴旋转魔方pos为0和1的两层
+	// pos的取值为-2时，绕Z轴旋转魔方pos为1和2的两层
 	void RotateZ(int pos, float dTheta, bool isPressed = false);
 	
 	

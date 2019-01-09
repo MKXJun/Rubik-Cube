@@ -87,22 +87,10 @@ void GameApp::OnResize()
 
 void GameApp::UpdateScene(float dt)
 {
-	KeyInput(dt);
+	// 键鼠更新
+	KeyInput();
 	MouseInput(dt);
-	
 
-	// 反复旋转
-	static float theta = XM_PIDIV2;
-	if (!mRubik.IsLocked())
-	{
-		theta *= -1.0f;
-	}
-	// 就算摆出来也不会有问题(只有未上锁的帧才会生效该调用)
-	//mRubik.RotateZ(theta);
-	//// 下面的也不会被调用
-	//mRubik.RotateX(2, theta);
-	//mRubik.RotateY(0, theta);
-	
 	// 更新魔方
 	mRubik.Update(dt);
 
@@ -180,7 +168,7 @@ bool GameApp::InitResource()
 	return true;
 }
 
-void GameApp::KeyInput(float dt)
+void GameApp::KeyInput()
 {
 	Keyboard::State keyState = mKeyboard->GetState();
 	mKeyboardTracker.Update(keyState);
@@ -191,22 +179,120 @@ void GameApp::KeyInput(float dt)
 
 	// 公式x
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Up))
+	{
 		mRubik.RotateX(XM_PIDIV2);
+		return;
+	}
 	// 公式x'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Down))
+	{
 		mRubik.RotateX(-XM_PIDIV2);
+		return;
+	}
 	// 公式y
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Left))
+	{
 		mRubik.RotateY(XM_PIDIV2);
+		return;
+	}
+		
 	// 公式y'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Right))
+	{
 		mRubik.RotateY(-XM_PIDIV2);
+		return;
+	}
 	// 公式z'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageUp))
+	{
 		mRubik.RotateZ(XM_PIDIV2);
+		return;
+	}
 	// 公式z
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageDown))
+	{
 		mRubik.RotateZ(-XM_PIDIV2);
+		return;
+	}
+
+	//
+	// 双层旋转
+	//
+
+	// 公式r
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::I))
+	{
+		mRubik.RotateX(-2, XM_PIDIV2);
+		return;
+	}
+	// 公式r'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::K))
+	{
+		mRubik.RotateX(-2, -XM_PIDIV2);
+		return;
+	}
+	// 公式u
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::J))
+	{
+		mRubik.RotateY(-2, XM_PIDIV2);
+		return;
+	}
+	// 公式u'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::L))
+	{
+		mRubik.RotateY(-2, -XM_PIDIV2);
+		return;
+	}
+	// 公式f'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::U))
+	{
+		mRubik.RotateZ(-1, XM_PIDIV2);
+		return;
+	}
+	// 公式f
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::O))
+	{
+		mRubik.RotateZ(-1, -XM_PIDIV2);
+		return;
+	}
+
+	// 公式l'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::W))
+	{
+		mRubik.RotateX(-1, XM_PIDIV2);
+		return;
+	}
+	// 公式l
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::S))
+	{
+		mRubik.RotateX(-1, -XM_PIDIV2);
+		return;
+	}
+	// 公式d'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::A))
+	{
+		mRubik.RotateY(-2, XM_PIDIV2);
+		return;
+	}
+	// 公式d
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::D))
+	{
+		mRubik.RotateY(-2, -XM_PIDIV2);
+		return;
+	}
+	// 公式b
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::Q))
+	{
+		mRubik.RotateZ(-1, XM_PIDIV2);
+		return;
+	}
+	// 公式b'
+	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::E))
+	{
+		mRubik.RotateZ(-1, -XM_PIDIV2);
+		return;
+	}
+
 
 	//
 	// 单层旋转
@@ -214,61 +300,114 @@ void GameApp::KeyInput(float dt)
 
 	// 公式R
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::I))
+	{
 		mRubik.RotateX(2, XM_PIDIV2);
+		return;
+	}
 	// 公式R'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::K))
+	{
 		mRubik.RotateX(2, -XM_PIDIV2);
+		return;
+	}
 	// 公式U
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::J))
+	{
 		mRubik.RotateY(2, XM_PIDIV2);
+		return;
+	}
 	// 公式U'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::L))
+	{
 		mRubik.RotateY(2, -XM_PIDIV2);
+		return;
+	}
 	// 公式F'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::U))
+	{
 		mRubik.RotateZ(0, XM_PIDIV2);
+		return;
+	}
 	// 公式F
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::O))
+	{
 		mRubik.RotateZ(0, -XM_PIDIV2);
+		return;
+	}
 
 	// 公式L'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::W))
+	{
 		mRubik.RotateX(0, XM_PIDIV2);
+		return;
+	}
 	// 公式L
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::S))
+	{
 		mRubik.RotateX(0, -XM_PIDIV2);
+		return;
+	}
 	// 公式D'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::A))
+	{
 		mRubik.RotateY(0, XM_PIDIV2);
+		return;
+	}
 	// 公式D
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::D))
+	{
 		mRubik.RotateY(0, -XM_PIDIV2);
+		return;
+	}
 	// 公式B
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Q))
+	{
 		mRubik.RotateZ(2, XM_PIDIV2);
+		return;
+	}
 	// 公式B'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::E))
+	{
 		mRubik.RotateZ(2, -XM_PIDIV2);
+		return;
+	}
 
 	// 公式M
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::T))
+	{
 		mRubik.RotateX(1, XM_PIDIV2);
+		return;
+	}
 	// 公式M'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::G))
+	{
 		mRubik.RotateX(1, -XM_PIDIV2);
+		return;
+	}
 	// 公式E
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::F))
+	{
 		mRubik.RotateY(1, XM_PIDIV2);
+		return;
+	}
 	// 公式E'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::H))
+	{
 		mRubik.RotateY(1, -XM_PIDIV2);
+		return;
+	}
 	// 公式S'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::R))
+	{
 		mRubik.RotateZ(1, XM_PIDIV2);
+		return;
+	}
 	// 公式S
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Y))
+	{
 		mRubik.RotateZ(1, -XM_PIDIV2);
-
+		return;
+	}
 	
 }
 
