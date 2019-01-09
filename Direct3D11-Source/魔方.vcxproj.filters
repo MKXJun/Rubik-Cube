@@ -72,6 +72,9 @@
     <ClInclude Include="GameTimer.h">
       <Filter>模块文件</Filter>
     </ClInclude>
+    <ClInclude Include="Collision.h">
+      <Filter>模块文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WICTextureLoader.cpp">
@@ -118,6 +121,9 @@
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision.cpp">
+      <Filter>模块文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

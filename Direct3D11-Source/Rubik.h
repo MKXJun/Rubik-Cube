@@ -3,6 +3,7 @@
 
 #include <wrl/client.h>
 #include "Effects.h"
+#include "Collision.h"
 #include <vector>
 
 enum RubikFaceColor {
@@ -22,6 +23,12 @@ enum RubikFace {
 	RubikFace_NegY,		// -Y面
 	RubikFace_PosZ,		// +Z面
 	RubikFace_NegZ,		// -Z面
+};
+
+enum RubikRotationAxis {
+	RubikRotationAxis_X,	// 绕X轴旋转
+	RubikRotationAxis_Y,	// 绕Y轴旋转
+	RubikRotationAxis_Z,	// 绕Z轴旋转
 };
 
 struct Cube
@@ -55,19 +62,27 @@ public:
 	// 当前是否在进行动画中
 	bool IsLocked() const;
 
+	// 当前射线拾取到哪个立方体(只考虑可见立方体)的对应索引，未找到则返回(-1, -1, -1)
+	DirectX::XMINT3 HitCube(Ray ray, float * pDist = nullptr) const;
+
+
 	// 绕X轴旋转整个魔方
 	void RotateX(float dTheta, bool isPressed = false);
-	// 绕X轴旋转整个魔方
-	void RotateY(float dTheta, bool isPressed = false);
-	// 绕X轴旋转整个魔方
-	void RotateZ(float dTheta, bool isPressed = false);
-
 	// 绕X轴旋转魔方某一层
 	void RotateX(int pos, float dTheta, bool isPressed = false);
+
+	// 绕Y轴旋转整个魔方
+	void RotateY(float dTheta, bool isPressed = false);
 	// 绕Y轴旋转魔方某一层
 	void RotateY(int pos, float dTheta, bool isPressed = false);
+
+	// 绕Z轴旋转整个魔方
+	void RotateZ(float dTheta, bool isPressed = false);
 	// 绕Z轴旋转魔方某一层
 	void RotateZ(int pos, float dTheta, bool isPressed = false);
+	
+	
+	
 
 	// 设置旋转速度(rad/s)
 	void SetRotationSpeed(float rad);

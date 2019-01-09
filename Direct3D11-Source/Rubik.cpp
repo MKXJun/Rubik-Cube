@@ -232,18 +232,49 @@ bool Rubik::IsLocked() const
 	return mIsLocked;
 }
 
+DirectX::XMINT3 Rubik::HitCube(Ray ray, float * pDist) const
+{
+	BoundingOrientedBox box(XMFLOAT3(), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	BoundingOrientedBox transformedBox;
+	XMINT3 res = XMINT3(-1, -1, -1);
+	float dist, minDist = FLT_MAX;
+
+	// 优先拾取暴露在外的立方体(同时也是距离摄像机最近的)
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
+		{
+			for (int k = 0; k < 3; ++k)
+			{
+				box.Transform(transformedBox, mCubes[i][j][k].GetWorldMatrix());
+				if (ray.Hit(transformedBox, &dist) && dist < minDist)
+				{
+					minDist = dist;
+					res = XMINT3(i, j, k);
+				}
+			}
+		}
+	}
+	if (pDist)
+		*pDist = (minDist == FLT_MAX ? 0.0f : minDist);
+		
+	return res;
+}
+
 void Rubik::RotateX(float dTheta, bool isPressed)
 {
 	if (!mIsLocked)
 	{
 		// 检验当前是否为键盘操作
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
+		if (!isPressed && mIsPressed && isKeyOp)
 		{
 			return;
 		}
+
+		mIsPressed = isPressed;
 
 		// 更新旋转状态
 		for (int i = 0; i < 3; ++i)
@@ -252,11 +283,42 @@ void Rubik::RotateX(float dTheta, bool isPressed)
 					mCubes[i][j][k].rotation.x += dTheta;
 
 		// 鼠标或键盘操作完成
-		if (!isPressed)
+		if (!mIsPressed)
+		{
+			// 开始动画演示状态
+			mIsLocked = true;
+
+			// 进行预旋转
+			PreRotateX(isKeyOp);
+		}
+	}
+}
+
+void Rubik::RotateX(int pos, float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (!isPressed && mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		mIsPressed = isPressed;
+
+		// 更新旋转状态
+		for (int j = 0; j < 3; ++j)
+			for (int k = 0; k < 3; ++k)
+				mCubes[pos][j][k].rotation.x += dTheta;
+
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
 		{
 
 			// 开始动画演示状态
-			mIsPressed = false;
 			mIsLocked = true;
 
 			// 进行预旋转
@@ -271,9 +333,9 @@ void Rubik::RotateY(float dTheta, bool isPressed)
 	{
 		// 检验当前是否为键盘操作
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
+		if (!isPressed && mIsPressed && isKeyOp)
 		{
 			return;
 		}
@@ -284,12 +346,43 @@ void Rubik::RotateY(float dTheta, bool isPressed)
 				for (int k = 0; k < 3; ++k)
 					mCubes[i][j][k].rotation.y += dTheta;
 
-		// 鼠标或键盘操作完成
-		if (!isPressed)
-		{
+		mIsPressed = isPressed;
 
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
+		{
 			// 开始动画演示状态
-			mIsPressed = false;
+			mIsLocked = true;
+
+			// 进行预旋转
+			PreRotateY(isKeyOp);
+		}
+	}
+}
+
+void Rubik::RotateY(int pos, float dTheta, bool isPressed)
+{
+	if (!mIsLocked)
+	{
+		// 检验当前是否为键盘操作
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
+		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
+		if (!isPressed && mIsPressed && isKeyOp)
+		{
+			return;
+		}
+
+		for (int k = 0; k < 3; ++k)
+			for (int i = 0; i < 3; ++i)
+				mCubes[i][pos][k].rotation.y += dTheta;
+
+		mIsPressed = isPressed;
+
+		// 鼠标或键盘操作完成
+		if (!mIsPressed)
+		{
+			// 开始动画演示状态
 			mIsLocked = true;
 
 			// 进行预旋转
@@ -304,12 +397,14 @@ void Rubik::RotateZ(float dTheta, bool isPressed)
 	{
 		// 检验当前是否为键盘操作
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
+		if (!isPressed && mIsPressed && isKeyOp)
 		{
 			return;
 		}
+
+		mIsPressed = isPressed;
 
 		// 更新旋转状态
 		for (int i = 0; i < 3; ++i)
@@ -318,77 +413,14 @@ void Rubik::RotateZ(float dTheta, bool isPressed)
 					mCubes[i][j][k].rotation.z += dTheta;
 
 		// 鼠标或键盘操作完成
-		if (!isPressed)
+		if (!mIsPressed)
 		{
 
 			// 开始动画演示状态
-			mIsPressed = false;
 			mIsLocked = true;
 
 			// 进行预旋转
 			PreRotateZ(isKeyOp);
-		}
-	}
-}
-
-void Rubik::RotateX(int pos, float dTheta, bool isPressed)
-{
-	if (!mIsLocked)
-	{
-		// 检验当前是否为键盘操作
-		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
-		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
-		{
-			return;
-		}
-
-		// 更新旋转状态
-		for (int j = 0; j < 3; ++j)
-			for (int k = 0; k < 3; ++k)
-				mCubes[pos][j][k].rotation.x += dTheta;
-
-		// 鼠标或键盘操作完成
-		if (!isPressed)
-		{
-			
-			// 开始动画演示状态
-			mIsPressed = false;
-			mIsLocked = true;
-			
-			// 进行预旋转
-			PreRotateX(isKeyOp);
-		}
-	}
-}
-
-void Rubik::RotateY(int pos, float dTheta, bool isPressed)
-{
-	if (!mIsLocked)
-	{
-		// 检验当前是否为键盘操作
-		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
-		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
-		{
-			return;
-		}
-
-		for (int k = 0; k < 3; ++k)
-			for (int i = 0; i < 3; ++i)
-				mCubes[i][pos][k].rotation.y += dTheta;
-
-		// 鼠标或键盘操作完成
-		if (!isPressed)
-		{
-			// 开始动画演示状态
-			mIsPressed = false;
-			mIsLocked = true;
-
-			// 进行预旋转
-			PreRotateY(isKeyOp);
 		}
 	}
 }
@@ -399,22 +431,23 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 	{
 		// 检验当前是否为键盘操作
 		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 10e-5f);
+		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
-		if (mIsPressed && isKeyOp)
+		if (!isPressed && mIsPressed && isKeyOp)
 		{
 			return;
 		}
+
+		mIsPressed = isPressed;
 
 		for (int i = 0; i < 3; ++i)
 			for (int j = 0; j < 3; ++j)
 				mCubes[i][j][pos].rotation.z += dTheta;
 
 		// 鼠标或键盘操作完成
-		if (!isPressed)
+		if (!mIsPressed)
 		{
 			// 开始动画演示状态
-			mIsPressed = false;
 			mIsLocked = true;
 
 			// 进行预旋转
@@ -439,7 +472,7 @@ void Rubik::PreRotateX(bool isKeyOp)
 	for (int i = 0; i < 3; ++i)
 	{
 		// 当前层没有旋转则直接跳过
-		if (fabs(mCubes[i][0][0].rotation.x) < 10e-5f)
+		if (fabs(mCubes[i][0][0].rotation.x) < 1e-5f)
 			continue;
 		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
 		// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
@@ -493,7 +526,7 @@ void Rubik::PreRotateY(bool isKeyOp)
 	for (int j = 0; j < 3; ++j)
 	{
 		// 当前层没有旋转则直接跳过
-		if (fabs(mCubes[0][j][0].rotation.y) < 10e-5f)
+		if (fabs(mCubes[0][j][0].rotation.y) < 1e-5f)
 			continue;
 		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
 		// 计算归位回[-pi/4, pi/4)区间需要顺时针旋转90度的次数
@@ -548,7 +581,7 @@ void Rubik::PreRotateZ(bool isKeyOp)
 	for (int k = 0; k < 3; ++k)
 	{
 		// 当前层没有旋转则直接跳过
-		if (fabs(mCubes[0][0][k].rotation.z) < 10e-5f)
+		if (fabs(mCubes[0][0][k].rotation.z) < 1e-5f)
 			continue;
 
 		// 由于此时被旋转面的所有方块旋转角度都是一样的，可以从中取一个来计算。
