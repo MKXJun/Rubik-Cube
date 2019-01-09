@@ -39,7 +39,7 @@ private:
 	float mCurrDelay;							// 当前延迟时间
 	bool mDirectionLocked;						// 方向锁
 	RubikRotationAxis mCurrRotationAxis;		// 当前鼠标拖动时的旋转轴
-	int mSlidePos;								// 当前鼠标拖动的层数索引，-1为整个魔方
+	int mSlidePos;								// 当前鼠标拖动的层数索引，3为整个魔方
 
 	std::unique_ptr<Camera> mCamera;			// 第三人称摄像机
 

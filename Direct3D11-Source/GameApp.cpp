@@ -180,38 +180,37 @@ void GameApp::KeyInput()
 	// 公式x
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Up))
 	{
-		mRubik.RotateX(XM_PIDIV2);
+		mRubik.RotateX(3, XM_PIDIV2);
 		return;
 	}
 	// 公式x'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Down))
 	{
-		mRubik.RotateX(-XM_PIDIV2);
+		mRubik.RotateX(3, -XM_PIDIV2);
 		return;
 	}
 	// 公式y
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Left))
 	{
-		mRubik.RotateY(XM_PIDIV2);
+		mRubik.RotateY(3, XM_PIDIV2);
 		return;
 	}
-		
 	// 公式y'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Right))
 	{
-		mRubik.RotateY(-XM_PIDIV2);
+		mRubik.RotateY(3, -XM_PIDIV2);
 		return;
 	}
 	// 公式z'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageUp))
 	{
-		mRubik.RotateZ(XM_PIDIV2);
+		mRubik.RotateZ(3, XM_PIDIV2);
 		return;
 	}
 	// 公式z
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageDown))
 	{
-		mRubik.RotateZ(-XM_PIDIV2);
+		mRubik.RotateZ(3, -XM_PIDIV2);
 		return;
 	}
 
@@ -508,7 +507,7 @@ void GameApp::MouseInput(float dt)
 			// 当前鼠标操纵的是空白地区，则对整个魔方旋转
 			else
 			{
-				mSlidePos = -1;
+				mSlidePos = 3;
 				// 水平操作是Y轴旋转
 				if (!isVertical)
 				{
@@ -531,24 +530,11 @@ void GameApp::MouseInput(float dt)
 		if (mDirectionLocked)
 		{
 			// 进行旋转
-			if (mSlidePos == -1)
+			switch (mCurrRotationAxis)
 			{
-				switch (mCurrRotationAxis)
-				{
-				case RubikRotationAxis_X: mRubik.RotateX((dx - dy) * 0.01f, true); break;
-				case RubikRotationAxis_Y: mRubik.RotateY(-dx * 0.01f, true); break;
-				case RubikRotationAxis_Z: mRubik.RotateZ((-dx - dy) * 0.01f, true); break;
-				}
-			}
-			else
-			{
-				switch (mCurrRotationAxis)
-				{
-				case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, (dx - dy) * 0.01f, true); break;
-				case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, -dx * 0.01f, true); break;
-				case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, (-dx - dy) * 0.01f, true); break;
-				}
-
+			case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, (dx - dy) * 0.008f, true); break;
+			case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, -dx * 0.008f, true); break;
+			case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, (-dx - dy) * 0.008f, true); break;
 			}
 		}
 	}
@@ -562,24 +548,11 @@ void GameApp::MouseInput(float dt)
 		// 坐标移出屏幕
 		mClickPosX = mClickPosY = -1;
 		// 发送完成指令，进行预旋转
-		if (mSlidePos == -1)
+		switch (mCurrRotationAxis)
 		{
-			switch (mCurrRotationAxis)
-			{
-			case RubikRotationAxis_X: mRubik.RotateX(0.0f); break;
-			case RubikRotationAxis_Y: mRubik.RotateY(0.0f); break;
-			case RubikRotationAxis_Z: mRubik.RotateZ(0.0f); break;
-			}
-		}
-		else
-		{
-			switch (mCurrRotationAxis)
-			{
-			case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, 0.0f); break;
-			case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, 0.0f); break;
-			case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, 0.0f); break;
-			}
-
+		case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, 0.0f); break;
+		case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, 0.0f); break;
+		case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, 0.0f); break;
 		}
 	}
 }
