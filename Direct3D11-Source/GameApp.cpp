@@ -27,8 +27,9 @@ bool GameApp::Init()
 	mMouse->SetWindow(mhMainWnd);
 	mMouse->SetMode(DirectX::Mouse::MODE_ABSOLUTE);
 
-	// 初始化滑动延迟时间
+	// 初始化滑动延迟时间和点击位置
 	mSlideDelay = 0.05f;
+	mClickPosX = mClickPosY = -1;
 
 	return true;
 }
