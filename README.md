@@ -1,6 +1,6 @@
 # DirectX实现的3D魔方游戏
 
-![](https://github.com/MKXJun/DirectX11-With-Windows-SDK/blob/master/replay.gif)
+![](https://github.com/MKXJun/Rubik-Cube/blob/master/replay.gif)
 
 ## Direct3D 11.x实现版本 V1.0
 
