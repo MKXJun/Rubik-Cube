@@ -232,6 +232,34 @@ bool Rubik::IsLocked() const
 	return mIsLocked;
 }
 
+bool Rubik::IsCompleted() const
+{
+	RubikFaceColor posX, negX, posY, negY, posZ, negZ;
+	posX = mCubes[2][0][0].faceColors[0];
+	negX = mCubes[0][0][0].faceColors[1];
+	posY = mCubes[0][2][0].faceColors[2];
+	negY = mCubes[0][0][0].faceColors[3];
+	posZ = mCubes[0][0][2].faceColors[4];
+	negZ = mCubes[0][0][0].faceColors[5];
+
+	for (int j = 0; j < 3; ++j)
+		for (int k = 0; k < 3; ++k)
+			if (mCubes[2][j][k].faceColors[0] != posX || mCubes[0][j][k].faceColors[1] != negX)
+				return false;
+
+	for (int k = 0; k < 3; ++k)
+		for (int i = 0; i < 3; ++i)
+			if (mCubes[i][2][k].faceColors[2] != posY || mCubes[i][0][k].faceColors[3] != negY)
+				return false;
+
+	for (int i = 0; i < 3; ++i)
+		for (int j = 0; j < 3; ++j)
+			if (mCubes[i][j][2].faceColors[4] != posZ || mCubes[i][j][0].faceColors[5] != negZ)
+				return false;
+
+	return true;
+}
+
 DirectX::XMINT3 Rubik::HitCube(Ray ray, float * pDist) const
 {
 	BoundingOrientedBox box(XMFLOAT3(), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -266,8 +294,9 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 	if (!mIsLocked)
 	{
 		// 检验当前是否为键盘操作
-		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的倍数(不包括0)的瞬时值
+		bool isKeyOp =  static_cast<int>(round(dTheta / XM_PIDIV2)) != 0 &&
+			(fabs(fmod(dTheta, XM_PIDIV2) < 1e-5f));
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
 		if (mIsPressed && isKeyOp)
 		{
@@ -299,7 +328,6 @@ void Rubik::RotateX(int pos, float dTheta, bool isPressed)
 		// 鼠标或键盘操作完成
 		if (!mIsPressed)
 		{
-
 			// 开始动画演示状态
 			mIsLocked = true;
 
@@ -314,8 +342,9 @@ void Rubik::RotateY(int pos, float dTheta, bool isPressed)
 	if (!mIsLocked)
 	{
 		// 检验当前是否为键盘操作
-		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的倍数(不包括0)的瞬时值
+		bool isKeyOp = static_cast<int>(round(dTheta / XM_PIDIV2)) != 0 &&
+			(fabs(fmod(dTheta, XM_PIDIV2) < 1e-5f));
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
 		if (mIsPressed && isKeyOp)
 		{
@@ -360,8 +389,9 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 	if (!mIsLocked)
 	{
 		// 检验当前是否为键盘操作
-		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的瞬时值
-		bool isKeyOp = (fabs(fabs(dTheta) - XM_PIDIV2) < 1e-5f);
+		// 可以认为仅当键盘操作时才会产生绝对值为pi/2的倍数(不包括0)的瞬时值
+		bool isKeyOp = static_cast<int>(round(dTheta / XM_PIDIV2)) != 0 &&
+			(fabs(fmod(dTheta, XM_PIDIV2) < 1e-5f));
 		// 键盘输入和鼠标操作互斥，拒绝键盘的操作
 		if (mIsPressed && isKeyOp)
 		{

@@ -30,7 +30,12 @@ bool GameApp::Init()
 	// 初始化滑动延迟时间和点击位置
 	mSlideDelay = 0.05f;
 	mClickPosX = mClickPosY = -1;
-
+	// 初始化计时器
+	mGameTimer.Reset();
+	mGameTimer.Stop();
+	// 初始化游戏状态
+	mGameStatus = GameStatus::Preparing;
+	mCurrRotationRecord.dTheta = 0.0f;
 	return true;
 }
 
@@ -89,8 +94,64 @@ void GameApp::OnResize()
 void GameApp::UpdateScene(float dt)
 {
 	// 键鼠更新
-	KeyInput();
-	MouseInput(dt);
+	/*if (mGameStatus != GameStatus::Ready)
+	{*/
+
+	//}
+	
+	if (mGameStatus == GameStatus::Preparing)
+	{
+		if (!mRubik.IsLocked())
+		{
+			if (!mRotationRecordStack.empty())
+			{
+				// 打乱
+				auto record = mRotationRecordStack.top();
+				switch (record.axis)
+				{
+				case RubikRotationAxis_X: mRubik.RotateX(record.pos, -record.dTheta); break;
+				case RubikRotationAxis_Y: mRubik.RotateY(record.pos, -record.dTheta); break;
+				case RubikRotationAxis_Z: mRubik.RotateZ(record.pos, -record.dTheta); break;
+				}
+				mRotationRecordStack.pop();
+			}
+			else
+			{
+				mGameStatus = GameStatus::Ready;
+			}
+		}
+		// 播放摄像机动画
+		PlayCameraAnimation(dt);
+	}
+	else
+	{
+		KeyInput();
+		MouseInput(dt);
+	}
+
+	// 仅实质性旋转才会计时
+	if (mGameStatus == GameStatus::Ready && !mRotationRecordStack.empty())
+	{
+		// 开始游戏，计时
+		mGameTimer.Start();
+		mGameStatus = GameStatus::Playing;
+	}
+	else if (mGameStatus == GameStatus::Playing)
+	{
+		if (mRubik.IsCompleted())
+		{
+			// 完成魔方，停止计时
+			mGameTimer.Stop();
+			mGameStatus = GameStatus::Finished;
+			mIsCompleted = true;
+		}
+		else
+		{
+			mGameTimer.Tick();
+		}
+	}
+
+
 
 	// 更新魔方
 	mRubik.Update(dt);
@@ -120,23 +181,7 @@ void GameApp::DrawScene()
 
 		// 用于Debug输出
 		Mouse::State mouseState = mMouse->GetState();
-		std::wstring wstr = L"鼠标位置：(" + std::to_wstring(mouseState.x) + L", " + std::to_wstring(mouseState.y) + L")";
-		Ray ray = Ray::ScreenToRay(*mCamera, (float)mouseState.x, (float)mouseState.y);
-		float dist;
-		XMINT3 pos = mRubik.HitCube(ray, &dist);
-		wstr += L"\n选中方块索引：[" + std::to_wstring(pos.x) + L"][" + std::to_wstring(pos.y) + L"][" + std::to_wstring(pos.z) + L"]\n"
-			"击中点：";
-		if (dist == 0.0f)
-		{
-			wstr += L"无";
-		}
-		else
-		{
-			wstr += L"(" + std::to_wstring(ray.origin.x + dist * ray.direction.x) + L", " +
-				std::to_wstring(ray.origin.y + dist * ray.direction.y) + L", " +
-				std::to_wstring(ray.origin.z + dist * ray.direction.z) + L")";
-		}
-
+		std::wstring wstr = L"用时：" + floating_to_wstring(mGameTimer.TotalTime(), 3);
 		md2dRenderTarget->DrawTextW(wstr.c_str(), (UINT)wstr.size(), mTextFormat.Get(),
 			D2D1_RECT_F{ 0.0f, 0.0f, 600.0f, 200.0f }, mColorBrush.Get());
 		HR(md2dRenderTarget->EndDraw());
@@ -147,8 +192,51 @@ void GameApp::DrawScene()
 
 
 
+void GameApp::Shuffle()
+{
+	// 清栈
+	while (!mRotationRecordStack.empty())
+		mRotationRecordStack.pop();
+	// 往栈上塞30个随机旋转操作用于打乱
+	srand(static_cast<unsigned>(time(nullptr)));
+	for (int i = 0; i < 30; ++i)
+	{
+		mCurrRotationRecord.axis = static_cast<RubikRotationAxis>(rand() % 3);
+		mCurrRotationRecord.pos = rand() % 4;
+		mCurrRotationRecord.dTheta = XM_PIDIV2 * (rand() % 2 ? 1 : -1);
+		mRotationRecordStack.push(mCurrRotationRecord);
+	}
+}
+
+void GameApp::PlayCameraAnimation(float dt)
+{
+	// 获取子类
+	auto cam3rd = dynamic_cast<ThirdPersonCamera*>(mCamera.get());
+
+	// ******************
+	// 第三人称摄像机的操作
+	//
+	mAnimationTime += dt;
+
+	float theta = -XM_PIDIV2 + XM_PIDIV4 * mAnimationTime * 0.2f;
+	if (theta > -XM_PIDIV4)
+		theta = -XM_PIDIV4;
+	float dist = 20.0f - mAnimationTime * 2.0f;
+	if (dist < 10.0f)
+		dist = 10.0f;
+	cam3rd->SetRotationX(XM_PIDIV2 * 0.6f);
+	cam3rd->SetRotationY(theta);
+	cam3rd->SetDistance(dist);
+
+	// 更新观察矩阵
+	mCamera->UpdateViewMatrix();
+	mBasicEffect.SetViewMatrix(mCamera->GetViewXM());
+}
+
 bool GameApp::InitResource()
 {
+	// 产生用于打乱魔方的记录
+	Shuffle();
 	// 初始化魔方
 	mRubik.InitResources(md3dDevice, md3dImmediateContext);
 	mRubik.SetRotationSpeed(XM_2PI * 1.5f);
@@ -175,6 +263,23 @@ void GameApp::KeyInput()
 	mKeyboardTracker.Update(keyState);
 
 	//
+	// 撤销操作
+	//
+	if (keyState.IsKeyDown(Keyboard::LeftControl) &&
+		mKeyboardTracker.IsKeyPressed(Keyboard::Z) &&
+		!mRubik.IsLocked() && !mRotationRecordStack.empty())
+	{
+		auto record = mRotationRecordStack.top();
+		switch (record.axis)
+		{
+		case RubikRotationAxis_X: mRubik.RotateX(record.pos, -record.dTheta); break;
+		case RubikRotationAxis_Y: mRubik.RotateY(record.pos, -record.dTheta); break;
+		case RubikRotationAxis_Z: mRubik.RotateZ(record.pos, -record.dTheta); break;
+		}
+		mRotationRecordStack.pop();
+	}
+
+	//
 	// 整个魔方旋转
 	//
 
@@ -182,36 +287,42 @@ void GameApp::KeyInput()
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Up))
 	{
 		mRubik.RotateX(3, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 3, XM_PIDIV2 });
 		return;
 	}
 	// 公式x'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Down))
 	{
 		mRubik.RotateX(3, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 3, -XM_PIDIV2 });
 		return;
 	}
 	// 公式y
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Left))
 	{
 		mRubik.RotateY(3, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 3, XM_PIDIV2 });
 		return;
 	}
 	// 公式y'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Right))
 	{
 		mRubik.RotateY(3, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 3, -XM_PIDIV2 });
 		return;
 	}
 	// 公式z'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageUp))
 	{
 		mRubik.RotateZ(3, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 3, XM_PIDIV2 });
 		return;
 	}
 	// 公式z
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::PageDown))
 	{
 		mRubik.RotateZ(3, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 3, -XM_PIDIV2 });
 		return;
 	}
 
@@ -223,36 +334,42 @@ void GameApp::KeyInput()
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::I))
 	{
 		mRubik.RotateX(-2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, -2, XM_PIDIV2 });
 		return;
 	}
 	// 公式r'
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::K))
 	{
 		mRubik.RotateX(-2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, -2, -XM_PIDIV2 });
 		return;
 	}
 	// 公式u
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::J))
 	{
 		mRubik.RotateY(-2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, -2, XM_PIDIV2 });
 		return;
 	}
 	// 公式u'
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::L))
 	{
 		mRubik.RotateY(-2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, -2, -XM_PIDIV2 });
 		return;
 	}
 	// 公式f'
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::U))
 	{
 		mRubik.RotateZ(-1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, -1, XM_PIDIV2 });
 		return;
 	}
 	// 公式f
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::O))
 	{
 		mRubik.RotateZ(-1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, -1, -XM_PIDIV2 });
 		return;
 	}
 
@@ -260,36 +377,42 @@ void GameApp::KeyInput()
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::W))
 	{
 		mRubik.RotateX(-1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, -1, XM_PIDIV2 });
 		return;
 	}
 	// 公式l
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::S))
 	{
 		mRubik.RotateX(-1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, -1, -XM_PIDIV2 });
 		return;
 	}
 	// 公式d'
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::A))
 	{
-		mRubik.RotateY(-2, XM_PIDIV2);
+		mRubik.RotateY(-1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, -1, XM_PIDIV2 });
 		return;
 	}
 	// 公式d
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::D))
 	{
-		mRubik.RotateY(-2, -XM_PIDIV2);
+		mRubik.RotateY(-1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, -1, -XM_PIDIV2 });
 		return;
 	}
 	// 公式b
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::Q))
 	{
-		mRubik.RotateZ(-1, XM_PIDIV2);
+		mRubik.RotateZ(-2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, -2, XM_PIDIV2 });
 		return;
 	}
 	// 公式b'
 	if (keyState.IsKeyDown(Keyboard::LeftControl) && mKeyboardTracker.IsKeyPressed(Keyboard::E))
 	{
-		mRubik.RotateZ(-1, -XM_PIDIV2);
+		mRubik.RotateZ(-2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, -2, -XM_PIDIV2 });
 		return;
 	}
 
@@ -302,36 +425,42 @@ void GameApp::KeyInput()
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::I))
 	{
 		mRubik.RotateX(2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 2, XM_PIDIV2 });
 		return;
 	}
 	// 公式R'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::K))
 	{
 		mRubik.RotateX(2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 2, -XM_PIDIV2 });
 		return;
 	}
 	// 公式U
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::J))
 	{
 		mRubik.RotateY(2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 2, XM_PIDIV2 });
 		return;
 	}
 	// 公式U'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::L))
 	{
 		mRubik.RotateY(2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 2, -XM_PIDIV2 });
 		return;
 	}
 	// 公式F'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::U))
 	{
 		mRubik.RotateZ(0, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 0, XM_PIDIV2 });
 		return;
 	}
 	// 公式F
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::O))
 	{
 		mRubik.RotateZ(0, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 0, -XM_PIDIV2 });
 		return;
 	}
 
@@ -339,36 +468,42 @@ void GameApp::KeyInput()
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::W))
 	{
 		mRubik.RotateX(0, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 0, XM_PIDIV2 });
 		return;
 	}
 	// 公式L
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::S))
 	{
 		mRubik.RotateX(0, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 0, -XM_PIDIV2 });
 		return;
 	}
 	// 公式D'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::A))
 	{
 		mRubik.RotateY(0, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 0, XM_PIDIV2 });
 		return;
 	}
 	// 公式D
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::D))
 	{
 		mRubik.RotateY(0, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 0, -XM_PIDIV2 });
 		return;
 	}
 	// 公式B
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Q))
 	{
 		mRubik.RotateZ(2, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 2, XM_PIDIV2 });
 		return;
 	}
 	// 公式B'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::E))
 	{
 		mRubik.RotateZ(2, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 2, -XM_PIDIV2 });
 		return;
 	}
 
@@ -376,36 +511,42 @@ void GameApp::KeyInput()
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::T))
 	{
 		mRubik.RotateX(1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 1, XM_PIDIV2 });
 		return;
 	}
 	// 公式M'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::G))
 	{
 		mRubik.RotateX(1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_X, 1, -XM_PIDIV2 });
 		return;
 	}
 	// 公式E
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::F))
 	{
 		mRubik.RotateY(1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 1, XM_PIDIV2 });
 		return;
 	}
 	// 公式E'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::H))
 	{
 		mRubik.RotateY(1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Y, 1, -XM_PIDIV2 });
 		return;
 	}
 	// 公式S'
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::R))
 	{
 		mRubik.RotateZ(1, XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 1, XM_PIDIV2 });
 		return;
 	}
 	// 公式S
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Y))
 	{
 		mRubik.RotateZ(1, -XM_PIDIV2);
+		mRotationRecordStack.push(RubikRotationRecord{ RubikRotationAxis_Z, 1, -XM_PIDIV2 });
 		return;
 	}
 	
@@ -488,41 +629,41 @@ void GameApp::MouseInput(float dt)
 			// 当前鼠标操纵的是-Z面，根据操作类型决定旋转轴
 			if (pos.z == 0 && fabs((ray.origin.z + dist * ray.direction.z) - (-3.0f)) < 1e-5f)
 			{
-				mSlidePos = isVertical ? pos.x : pos.y;
-				mCurrRotationAxis = isVertical ? RubikRotationAxis_X : RubikRotationAxis_Y;
+				mCurrRotationRecord.pos = isVertical ? pos.x : pos.y;
+				mCurrRotationRecord.axis = isVertical ? RubikRotationAxis_X : RubikRotationAxis_Y;
 			}
 			// 当前鼠标操纵的是+X面，根据操作类型决定旋转轴
 			else if (pos.x == 2 && fabs((ray.origin.x + dist * ray.direction.x) - 3.0f) < 1e-5f)
 			{
-				mSlidePos = isVertical ? pos.z : pos.y;
-				mCurrRotationAxis = isVertical ? RubikRotationAxis_Z : RubikRotationAxis_Y;
+				mCurrRotationRecord.pos = isVertical ? pos.z : pos.y;
+				mCurrRotationRecord.axis = isVertical ? RubikRotationAxis_Z : RubikRotationAxis_Y;
 			}
 			// 当前鼠标操纵的是+Y面，要判断平移变化量dx和dy的符号来决定旋转方向
 			else if (pos.y == 2 && fabs((ray.origin.y + dist * ray.direction.y) - 3.0f) < 1e-5f)
 			{
 				// 判断异号
 				bool diffSign = ((dx & 0x80000000) != (dy & 0x80000000));
-				mSlidePos = diffSign ? pos.x : pos.z;
-				mCurrRotationAxis = diffSign ? RubikRotationAxis_X : RubikRotationAxis_Z;
+				mCurrRotationRecord.pos = diffSign ? pos.x : pos.z;
+				mCurrRotationRecord.axis = diffSign ? RubikRotationAxis_X : RubikRotationAxis_Z;
 			}
 			// 当前鼠标操纵的是空白地区，则对整个魔方旋转
 			else
 			{
-				mSlidePos = 3;
+				mCurrRotationRecord.pos = 3;
 				// 水平操作是Y轴旋转
 				if (!isVertical)
 				{
-					mCurrRotationAxis = RubikRotationAxis_Y;
+					mCurrRotationRecord.axis = RubikRotationAxis_Y;
 				}
 				// 屏幕左半部分的垂直操作是X轴旋转
 				else if (mouseState.x < mClientWidth / 2)
 				{
-					mCurrRotationAxis = RubikRotationAxis_X;
+					mCurrRotationRecord.axis = RubikRotationAxis_X;
 				}
 				// 屏幕右半部分的垂直操作是Z轴旋转
 				else
 				{
-					mCurrRotationAxis = RubikRotationAxis_Z;
+					mCurrRotationRecord.axis = RubikRotationAxis_Z;
 				}
 			}
 		}
@@ -531,11 +672,17 @@ void GameApp::MouseInput(float dt)
 		if (mDirectionLocked)
 		{
 			// 进行旋转
-			switch (mCurrRotationAxis)
+			switch (mCurrRotationRecord.axis)
 			{
-			case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, (dx - dy) * 0.008f, true); break;
-			case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, -dx * 0.008f, true); break;
-			case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, (-dx - dy) * 0.008f, true); break;
+			case RubikRotationAxis_X: mRubik.RotateX(mCurrRotationRecord.pos, (dx - dy) * 0.008f, true);
+				mCurrRotationRecord.dTheta += (dx - dy) * 0.008f;
+				break;
+			case RubikRotationAxis_Y: mRubik.RotateY(mCurrRotationRecord.pos, -dx * 0.008f, true);
+				mCurrRotationRecord.dTheta += (-dx * 0.008f);
+				break;
+			case RubikRotationAxis_Z: mRubik.RotateZ(mCurrRotationRecord.pos, (-dx - dy) * 0.008f, true);
+				mCurrRotationRecord.dTheta += (-dx - dy) * 0.008f;
+				break;
 			}
 		}
 	}
@@ -548,13 +695,31 @@ void GameApp::MouseInput(float dt)
 		mCurrDelay = 0.0f;
 		// 坐标移出屏幕
 		mClickPosX = mClickPosY = -1;
+
 		// 发送完成指令，进行预旋转
-		switch (mCurrRotationAxis)
+		switch (mCurrRotationRecord.axis)
 		{
-		case RubikRotationAxis_X: mRubik.RotateX(mSlidePos, 0.0f); break;
-		case RubikRotationAxis_Y: mRubik.RotateY(mSlidePos, 0.0f); break;
-		case RubikRotationAxis_Z: mRubik.RotateZ(mSlidePos, 0.0f); break;
+		case RubikRotationAxis_X: mRubik.RotateX(mCurrRotationRecord.pos, 0.0f); break;
+		case RubikRotationAxis_Y: mRubik.RotateY(mCurrRotationRecord.pos, 0.0f); break;
+		case RubikRotationAxis_Z: mRubik.RotateZ(mCurrRotationRecord.pos, 0.0f); break;
 		}
+
+		// 若这次旋转有意义，记录到栈中
+		int times = static_cast<int>(round(mCurrRotationRecord.dTheta / XM_PIDIV2)) % 4;
+		if (times != 0)
+		{
+			mCurrRotationRecord.dTheta = times * XM_PIDIV2;
+			mRotationRecordStack.push(mCurrRotationRecord);
+		}
+		// 旋转值归零
+		mCurrRotationRecord.dTheta = 0.0f;
 	}
+}
+
+std::wstring GameApp::floating_to_wstring(float val, int precision)
+{
+	std::wstring wstr;
+	wstr += L"%." + std::to_wstring(precision) + L"f";
+	return std::_Floating_to_wstring(wstr.c_str(), val);
 }
 

@@ -8,6 +8,15 @@
 class GameApp : public D3DApp
 {
 public:
+	enum class GameStatus {
+		FreeView,	// 自由视角
+		Preparing,	// 准备中
+		Ready,		// 就绪
+		Playing,	// 游玩中
+		Finished,	// 已完成
+	};
+
+public:
 	GameApp(HINSTANCE hInstance);
 	~GameApp();
 
@@ -18,10 +27,16 @@ public:
 
 
 private:
+
+	void Shuffle();
+	void PlayCameraAnimation(float dt);
+
 	bool InitResource();
 
 	void KeyInput();
 	void MouseInput(float dt);
+
+	std::wstring floating_to_wstring(float val, int precision);
 
 private:
 	ComPtr<ID2D1SolidColorBrush> mColorBrush;	// 单色笔刷
@@ -29,6 +44,16 @@ private:
 	ComPtr<IDWriteTextFormat> mTextFormat;		// 文本格式
 
 	Rubik mRubik;								// 魔方
+	
+	std::unique_ptr<Camera> mCamera;			// 第三人称摄像机
+
+	BasicEffect mBasicEffect;					// 基础特效管理类
+
+	GameTimer mGameTimer;						// 游戏计时器
+	GameStatus mGameStatus;						// 游戏状态
+	bool mIsCompleted;							// 是否完成
+
+	float mAnimationTime;						// 动画经过时间
 
 	//
 	// 鼠标操作控制
@@ -38,12 +63,10 @@ private:
 	float mSlideDelay;							// 拖动延迟响应时间 
 	float mCurrDelay;							// 当前延迟时间
 	bool mDirectionLocked;						// 方向锁
-	RubikRotationAxis mCurrRotationAxis;		// 当前鼠标拖动时的旋转轴
-	int mSlidePos;								// 当前鼠标拖动的层数索引，3为整个魔方
 
-	std::unique_ptr<Camera> mCamera;			// 第三人称摄像机
+	RubikRotationRecord mCurrRotationRecord;	// 当前旋转记录
 
-	BasicEffect mBasicEffect;					// 基础特效管理类
+	std::stack<RubikRotationRecord> mRotationRecordStack;	// 旋转记录栈
 };
 
 

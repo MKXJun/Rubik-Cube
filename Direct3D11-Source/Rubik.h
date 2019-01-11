@@ -5,6 +5,7 @@
 #include "Effects.h"
 #include "Collision.h"
 #include <vector>
+#include <stack>
 
 enum RubikFaceColor {
 	RubikFaceColor_Black,		// 黑色
@@ -29,6 +30,13 @@ enum RubikRotationAxis {
 	RubikRotationAxis_X,	// 绕X轴旋转
 	RubikRotationAxis_Y,	// 绕Y轴旋转
 	RubikRotationAxis_Z,	// 绕Z轴旋转
+};
+
+struct RubikRotationRecord
+{
+	RubikRotationAxis axis;	// 当前旋转轴
+	int pos;				// 当前旋转层的索引
+	float dTheta;			// 当前旋转的弧度
 };
 
 struct Cube
@@ -61,6 +69,9 @@ public:
 	void Draw(ComPtr<ID3D11DeviceContext> deviceContext, BasicEffect& effect);
 	// 当前是否在进行动画中
 	bool IsLocked() const;
+	// 当前魔方是否还原
+	bool IsCompleted() const;
+
 
 	// 当前射线拾取到哪个立方体(只考虑可见立方体)的对应索引，未找到则返回(-1, -1, -1)
 	DirectX::XMINT3 HitCube(Ray ray, float * pDist = nullptr) const;
@@ -95,6 +106,7 @@ public:
 	ComPtr<ID3D11ShaderResourceView> GetTexArray() const;
 
 private:
+
 	// 绕X轴的预旋转
 	void PreRotateX(bool isKeyOp);
 	// 绕Y轴的预旋转
