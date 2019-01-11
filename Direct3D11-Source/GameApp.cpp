@@ -319,6 +319,10 @@ void GameApp::KeyInput()
 	// 整个魔方旋转
 	//
 
+	// 此时正在旋转的话则提前结束
+	if (mRubik.IsLocked())
+		return;
+
 	// 公式x
 	if (mKeyboardTracker.IsKeyPressed(Keyboard::Up))
 	{
