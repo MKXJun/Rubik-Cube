@@ -128,7 +128,7 @@ void Rubik::Reset()
 			{
 				mCubes[i][j][k].pos = XMFLOAT3(-2.0f + 2.0f * i,
 					-2.0f + 2.0f * j, -2.0f + 2.0f * k);
-				mCubes[i][j][k].rotation = XMFLOAT3();
+				mCubes[i][j][k].rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
 				memset(mCubes[i][j][k].faceColors, 0, 
 					sizeof mCubes[i][j][k].faceColors);
 			}
@@ -262,7 +262,7 @@ bool Rubik::IsCompleted() const
 
 DirectX::XMINT3 Rubik::HitCube(Ray ray, float * pDist) const
 {
-	BoundingOrientedBox box(XMFLOAT3(), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	BoundingOrientedBox box(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 	BoundingOrientedBox transformedBox;
 	XMINT3 res = XMINT3(-1, -1, -1);
 	float dist, minDist = FLT_MAX;
@@ -426,7 +426,7 @@ void Rubik::RotateZ(int pos, float dTheta, bool isPressed)
 			mIsLocked = true;
 
 			// ½øÐÐÔ¤Ðý×ª
-			PreRotateZ(dTheta);
+			PreRotateZ(isKeyOp);
 		}
 	}
 }

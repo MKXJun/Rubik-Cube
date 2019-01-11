@@ -4,3 +4,4 @@ Debug/
 *.lik
 *.pdb
 *.vcxproj.user
+*.inc

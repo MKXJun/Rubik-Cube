@@ -9,7 +9,6 @@ class GameApp : public D3DApp
 {
 public:
 	enum class GameStatus {
-		FreeView,	// 自由视角
 		Preparing,	// 准备中
 		Ready,		// 就绪
 		Playing,	// 游玩中
@@ -28,8 +27,10 @@ public:
 
 private:
 
+	// 用于产生打乱魔方的序列
 	void Shuffle();
-	void PlayCameraAnimation(float dt);
+	// 播放摄像机动画，完成动画将返回true
+	bool PlayCameraAnimation(float dt);
 
 	bool InitResource();
 

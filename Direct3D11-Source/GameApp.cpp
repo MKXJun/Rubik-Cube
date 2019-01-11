@@ -94,13 +94,11 @@ void GameApp::OnResize()
 void GameApp::UpdateScene(float dt)
 {
 	// 键鼠更新
-	/*if (mGameStatus != GameStatus::Ready)
-	{*/
-
-	//}
-	
 	if (mGameStatus == GameStatus::Preparing)
 	{
+		// 播放摄像机动画
+		bool animComplete = PlayCameraAnimation(dt);
+
 		if (!mRubik.IsLocked())
 		{
 			if (!mRotationRecordStack.empty())
@@ -115,13 +113,11 @@ void GameApp::UpdateScene(float dt)
 				}
 				mRotationRecordStack.pop();
 			}
-			else
+			else if (animComplete)
 			{
 				mGameStatus = GameStatus::Ready;
 			}
 		}
-		// 播放摄像机动画
-		PlayCameraAnimation(dt);
 	}
 	else
 	{
@@ -138,20 +134,20 @@ void GameApp::UpdateScene(float dt)
 	}
 	else if (mGameStatus == GameStatus::Playing)
 	{
-		if (mRubik.IsCompleted())
+		if (mRubik.IsCompleted() && !mRubik.IsLocked())
 		{
 			// 完成魔方，停止计时
 			mGameTimer.Stop();
 			mGameStatus = GameStatus::Finished;
 			mIsCompleted = true;
+			std::wstring wstr = L"最终用时：" + floating_to_wstring(mGameTimer.TotalTime(), 3) + L"秒。";
+			MessageBox(nullptr, wstr.c_str(), L"完成", MB_OK);
 		}
 		else
 		{
 			mGameTimer.Tick();
 		}
 	}
-
-
 
 	// 更新魔方
 	mRubik.Update(dt);
@@ -181,7 +177,8 @@ void GameApp::DrawScene()
 
 		// 用于Debug输出
 		Mouse::State mouseState = mMouse->GetState();
-		std::wstring wstr = L"用时：" + floating_to_wstring(mGameTimer.TotalTime(), 3);
+		std::wstring wstr = L"F10(一键还原) F11(重置游戏) F12(关于作者)\n用时：" 
+			+ floating_to_wstring(mGameTimer.TotalTime(), 3) + L"s";
 		md2dRenderTarget->DrawTextW(wstr.c_str(), (UINT)wstr.size(), mTextFormat.Get(),
 			D2D1_RECT_F{ 0.0f, 0.0f, 600.0f, 200.0f }, mColorBrush.Get());
 		HR(md2dRenderTarget->EndDraw());
@@ -198,17 +195,18 @@ void GameApp::Shuffle()
 	while (!mRotationRecordStack.empty())
 		mRotationRecordStack.pop();
 	// 往栈上塞30个随机旋转操作用于打乱
+	RubikRotationRecord record;
 	srand(static_cast<unsigned>(time(nullptr)));
 	for (int i = 0; i < 30; ++i)
 	{
-		mCurrRotationRecord.axis = static_cast<RubikRotationAxis>(rand() % 3);
-		mCurrRotationRecord.pos = rand() % 4;
-		mCurrRotationRecord.dTheta = XM_PIDIV2 * (rand() % 2 ? 1 : -1);
-		mRotationRecordStack.push(mCurrRotationRecord);
+		record.axis = static_cast<RubikRotationAxis>(rand() % 3);
+		record.pos = rand() % 4;
+		record.dTheta = XM_PIDIV2 * (rand() % 2 ? 1 : -1);
+		mRotationRecordStack.push(record);
 	}
 }
 
-void GameApp::PlayCameraAnimation(float dt)
+bool GameApp::PlayCameraAnimation(float dt)
 {
 	// 获取子类
 	auto cam3rd = dynamic_cast<ThirdPersonCamera*>(mCamera.get());
@@ -217,21 +215,27 @@ void GameApp::PlayCameraAnimation(float dt)
 	// 第三人称摄像机的操作
 	//
 	mAnimationTime += dt;
+	float theta, dist;
 
-	float theta = -XM_PIDIV2 + XM_PIDIV4 * mAnimationTime * 0.2f;
+	theta = -XM_PIDIV2 + XM_PIDIV4 * mAnimationTime * 0.2f;
+	dist = 20.0f - mAnimationTime * 2.0f;
 	if (theta > -XM_PIDIV4)
 		theta = -XM_PIDIV4;
-	float dist = 20.0f - mAnimationTime * 2.0f;
 	if (dist < 10.0f)
 		dist = 10.0f;
-	cam3rd->SetRotationX(XM_PIDIV2 * 0.6f);
+
 	cam3rd->SetRotationY(theta);
 	cam3rd->SetDistance(dist);
 
 	// 更新观察矩阵
 	mCamera->UpdateViewMatrix();
 	mBasicEffect.SetViewMatrix(mCamera->GetViewXM());
+
+	if (fabs(theta + XM_PIDIV4) < 1e-5f && fabs(dist - 10.0f) < 1e-5f)
+		return true;
+	return false;
 }
+
 
 bool GameApp::InitResource()
 {
@@ -244,13 +248,14 @@ bool GameApp::InitResource()
 	mBasicEffect.SetRenderDefault(md3dImmediateContext);
 	// 初始化摄像机
 	mCamera.reset(new ThirdPersonCamera);
-	auto camera3rd = dynamic_cast<ThirdPersonCamera*>(mCamera.get());
-	camera3rd->SetDistance(10.0f);
-	camera3rd->SetDistanceMinMax(10.0f, 20.0f);
-	camera3rd->SetFrustum(XM_PI * 0.4f, AspectRatio(), 1.0f, 1000.0f);
-	camera3rd->SetViewPort(0.0f, 0.0f, (float)mClientWidth, (float)mClientHeight);
-	camera3rd->SetTarget(XMFLOAT3());
-	mBasicEffect.SetProjMatrix(camera3rd->GetProjXM());
+	auto cam3rd = dynamic_cast<ThirdPersonCamera*>(mCamera.get());
+	cam3rd->SetDistance(10.0f);
+	cam3rd->SetDistanceMinMax(10.0f, 200.0f);
+	cam3rd->SetFrustum(XM_PI * 0.4f, AspectRatio(), 1.0f, 1000.0f);
+	cam3rd->SetViewPort(0.0f, 0.0f, (float)mClientWidth, (float)mClientHeight);
+	cam3rd->SetTarget(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	cam3rd->SetRotationX(XM_PIDIV2 * 0.6f);
+	mBasicEffect.SetProjMatrix(cam3rd->GetProjXM());
 	mBasicEffect.SetTextureArray(mRubik.GetTexArray());
 	
 
@@ -261,6 +266,37 @@ void GameApp::KeyInput()
 {
 	Keyboard::State keyState = mKeyboard->GetState();
 	mKeyboardTracker.Update(keyState);
+
+	//
+	// 特殊操作
+	//
+
+	// 立即复原，但不算成绩
+	if (mKeyboardTracker.IsKeyPressed(Keyboard::F10))
+	{
+		
+		mGameTimer.Reset();
+		mGameTimer.Stop();
+		mRubik.Reset();
+		mGameStatus = GameStatus::Finished;
+	}
+	// 重置游戏
+	else if (mKeyboardTracker.IsKeyPressed(Keyboard::F11))
+	{
+		mGameTimer.Reset();
+		mGameTimer.Stop();
+		mRubik.Reset();
+		mGameStatus = GameStatus::Preparing;
+		Shuffle();
+		mAnimationTime = 0.0f;
+	}
+	else if (mKeyboardTracker.IsKeyPressed(Keyboard::F12))
+	{
+		std::wstring wstr = L"作者：X_Jun\n"
+			"版本：v1.0\n"
+			"本魔方可供学习和游玩\n";
+		MessageBox(nullptr, wstr.c_str(), L"关于作者", MB_OK);
+	}
 
 	//
 	// 撤销操作
