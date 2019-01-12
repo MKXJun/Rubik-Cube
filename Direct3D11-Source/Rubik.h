@@ -106,6 +106,9 @@ public:
 	ComPtr<ID3D11ShaderResourceView> GetTexArray() const;
 
 private:
+	// 从内存中创建纹理
+	ComPtr<ID3D11ShaderResourceView> CreateRubikCubeTextureArrayFromMemory(ComPtr<ID3D11Device> device,
+		ComPtr<ID3D11DeviceContext> deviceContext);
 
 	// 绕X轴的预旋转
 	void PreRotateX(bool isKeyOp);
@@ -154,6 +157,8 @@ private:
 	// 索引缓冲区，仅6个索引
 	ComPtr<ID3D11Buffer> mIndexBuffer;
 	
+	// 实例缓冲区，
+
 	// 纹理数组，包含7张纹理
 	ComPtr<ID3D11ShaderResourceView> mTexArray;
 };

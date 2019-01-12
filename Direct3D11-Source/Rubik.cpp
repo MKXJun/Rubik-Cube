@@ -3,7 +3,7 @@
 #include "Vertex.h"
 using namespace DirectX;
 using namespace Microsoft::WRL;
-
+using namespace std::experimental::filesystem;
 
 
 DirectX::XMMATRIX Cube::GetWorldMatrix() const
@@ -28,19 +28,37 @@ Rubik::Rubik()
 void Rubik::InitResources(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext)
 {
 
-	// 初始化纹理数组
-	mTexArray = CreateDDSTexture2DArrayFromFile(
-		device,
-		deviceContext,
-		std::vector<std::wstring>{
-			L"Resource/Black.dds",
-			L"Resource/Orange.dds",
-			L"Resource/Red.dds",
-			L"Resource/Green.dds",
-			L"Resource/Blue.dds",
-			L"Resource/Yellow.dds",
-			L"Resource/White.dds",
-	});
+	std::vector<std::wstring> filenames {
+		L"Resource/Black.dds",
+		L"Resource/Orange.dds",
+		L"Resource/Red.dds",
+		L"Resource/Green.dds",
+		L"Resource/Blue.dds",
+		L"Resource/Yellow.dds",
+		L"Resource/White.dds",
+	};
+
+	// 检验所有文件是否存在
+	bool fileExists = true;
+	for (const std::wstring& filename : filenames)
+	{
+		if (!exists(filename))
+		{
+			fileExists = false;
+			break;
+		}
+	}
+	if (fileExists)
+	{
+		// 从文件读取
+		mTexArray = CreateDDSTexture2DArrayFromFile(device, deviceContext, filenames);
+	}
+	else
+	{
+		// 从内存读取
+		// 后续可能会写专门的通用函数
+		mTexArray = CreateRubikCubeTextureArrayFromMemory(device, deviceContext);
+	}
 
 	//
 	// 初始化立方体网格模型
@@ -440,6 +458,95 @@ void Rubik::SetRotationSpeed(float rad)
 ComPtr<ID3D11ShaderResourceView> Rubik::GetTexArray() const
 {
 	return mTexArray;
+}
+
+ComPtr<ID3D11ShaderResourceView> Rubik::CreateRubikCubeTextureArrayFromMemory(
+	ComPtr<ID3D11Device> device,
+	ComPtr<ID3D11DeviceContext> deviceContext)
+{
+	// 只有文件缺失的情况才会来到这里
+	// 从内存创建
+
+	// 创建纹理数组
+	D3D11_TEXTURE2D_DESC texArrayDesc;
+	texArrayDesc.Width = 128;
+	texArrayDesc.Height = 128;
+	texArrayDesc.MipLevels = 0;	// 指定后将生成完整mipmap链
+	texArrayDesc.ArraySize = 7;
+	texArrayDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texArrayDesc.SampleDesc.Count = 1;		// 不使用多重采样
+	texArrayDesc.SampleDesc.Quality = 0;
+	texArrayDesc.Usage = D3D11_USAGE_DEFAULT;
+	texArrayDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;	// 生成mipmap需要绑定渲染目标
+	texArrayDesc.CPUAccessFlags = 0;
+	texArrayDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;	// 指定需要生成mipmap
+
+	ComPtr<ID3D11Texture2D> texArray;
+	HR(device->CreateTexture2D(&texArrayDesc, nullptr, texArray.GetAddressOf()));
+	// 创建后立马获取纹理数组描述以获取生成的mipLevel
+	texArray->GetDesc(&texArrayDesc);
+
+	// (a, b, g, r) => rgba
+	unsigned colors[7] = {
+		'\xff\x0\x0\x0',		// 黑色
+		'\xff\x0\x6c\xff',		// 橙色
+		'\xff\x2f\x42\xdc',		// 红色
+		'\xff\x54\x9d\x0',		// 绿色
+		'\xff\xf6\x81\x3d',		// 蓝色
+		'\xff\x9\xcc\xfd',		// 黄色
+		'\xff\xff\xff\xff'		// 白色
+	};
+
+
+	uint32_t textureMap[128][128];
+	// 默认先创建黑色
+	for (int i = 0; i < 128; ++i)
+		for (int j = 0; j < 128; ++j)
+			textureMap[i][j] = colors[0];
+
+	deviceContext->UpdateSubresource(texArray.Get(),
+		D3D11CalcSubresource(0, 0, texArrayDesc.MipLevels),
+		nullptr,
+		textureMap, 
+		128 * 4,
+		128 * 128 * 4
+	);
+	// 创建其它颜色的纹理
+	for (int i = 1; i <= 6; ++i)
+	{
+		for (int y = 7; y <= 17; ++y)
+			for (int x = 25 - y; x <= 102 + y; ++x)
+				textureMap[y][x] = textureMap[127 - y][x] = colors[i];
+
+		for (int y = 18; y <= 109; ++y)
+			for (int x = 7; x <= 120; ++x)
+				textureMap[y][x] = colors[i];
+
+
+		// 更新数据
+		deviceContext->UpdateSubresource(texArray.Get(),
+			D3D11CalcSubresource(0, i, texArrayDesc.MipLevels),
+			nullptr,
+			textureMap,
+			128 * 4,
+			128 * 128 * 4
+		);
+
+	}
+	// 创建纹理数组的SRV
+	D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
+	viewDesc.Format = texArrayDesc.Format;
+	viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	viewDesc.Texture2DArray.MostDetailedMip = 0;
+	viewDesc.Texture2DArray.MipLevels = -1;	// 生成mipamp
+	viewDesc.Texture2DArray.FirstArraySlice = 0;
+	viewDesc.Texture2DArray.ArraySize = 7;
+
+	ComPtr<ID3D11ShaderResourceView> texArraySRV;
+	HR(device->CreateShaderResourceView(texArray.Get(), &viewDesc, texArraySRV.GetAddressOf()));
+	// 生成mipmap
+	deviceContext->GenerateMips(texArraySRV.Get());
+	return texArraySRV;
 }
 
 void Rubik::PreRotateX(bool isKeyOp)
