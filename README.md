@@ -2,6 +2,8 @@
 
 ![](https://github.com/MKXJun/Rubik-Cube/blob/master/replay.gif)
 
+**教程链接：[DirectX11--实现一个3D魔方](https://www.cnblogs.com/X-Jun/p/10230580.html)**
+
 ## Direct3D 11.x实现版本 V1.1
 
 语言：C++11/14</br>
@@ -13,6 +15,7 @@
 最低Visual Studio版本要求：2015</br>
 最低系统要求：Windows 7
 
+**提醒：**</br>
 -不支持Direct3D 11.1的系统将无法看到文本输出，但不影响游戏体验。</br>
 -现在即便是移除Resource文件夹，程序也会自己生成一样的纹理。
 
