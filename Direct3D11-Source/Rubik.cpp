@@ -486,14 +486,14 @@ ComPtr<ID3D11ShaderResourceView> Rubik::CreateRubikCubeTextureArrayFromMemory(
 	// 创建后立马获取纹理数组描述以获取生成的mipLevel
 	texArray->GetDesc(&texArrayDesc);
 
-	// (a, b, g, r) => rgba
+	// (r, g, b, a)
 	unsigned colors[7] = {
-		'\xff\x0\x0\x0',		// 黑色
-		'\xff\x0\x6c\xff',		// 橙色
-		'\xff\x2f\x42\xdc',		// 红色
-		'\xff\x54\x9d\x0',		// 绿色
-		'\xff\xf6\x81\x3d',		// 蓝色
-		'\xff\x9\xcc\xfd',		// 黄色
+		'\x0\x0\x0\xff',		// 黑色
+		'\xff\x6c\x0\xff',		// 橙色
+		'\xdc\x42\x2f\xff',		// 红色
+		'\x0\x9d\x54\xff',		// 绿色
+		'\x3d\x81\xf6\xff',		// 蓝色
+		'\xfd\xcc\x9\xff',		// 黄色
 		'\xff\xff\xff\xff'		// 白色
 	};
 
