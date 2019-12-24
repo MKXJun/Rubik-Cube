@@ -15,7 +15,6 @@
 #include <d3dcompiler.h>
 #include <wrl/client.h>
 #include <wincodec.h>
-#include <filesystem>
 #include <vector>
 #include <string>
 #include "DXTrace.h"

@@ -1,7 +1,6 @@
 #include "GameApp.h"
 #include "d3dUtil.h"
 using namespace DirectX;
-using namespace std::experimental;
 
 GameApp::GameApp(HINSTANCE hInstance)
 	: D3DApp(hInstance)
@@ -758,8 +757,10 @@ void GameApp::MouseInput(float dt)
 
 std::wstring GameApp::floating_to_wstring(float val, int precision)
 {
-	std::wstring wstr;
-	wstr += L"%." + std::to_wstring(precision) + L"f";
-	return std::_Floating_to_wstring(wstr.c_str(), val);
+	std::wostringstream oss;
+	oss.setf(std::ios::fixed);
+	oss.precision(precision);
+	oss << val;
+	return oss.str();
 }
 

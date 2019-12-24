@@ -4,6 +4,8 @@
 #include "d3dApp.h"
 #include "Rubik.h"
 #include "Camera.h"
+#include <ctime>
+#include <sstream>
 
 class GameApp : public D3DApp
 {

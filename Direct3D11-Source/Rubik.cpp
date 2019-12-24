@@ -1,10 +1,9 @@
 #include "Rubik.h"
 #include "d3dUtil.h"
 #include "Vertex.h"
+#include <fstream>
 using namespace DirectX;
 using namespace Microsoft::WRL;
-using namespace std::experimental::filesystem;
-
 
 DirectX::XMMATRIX Cube::GetWorldMatrix() const
 {
@@ -42,11 +41,14 @@ void Rubik::InitResources(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContex
 	bool fileExists = true;
 	for (const std::wstring& filename : filenames)
 	{
-		if (!exists(filename))
+		std::wifstream wfin(filename);
+		if (!wfin.is_open())
 		{
 			fileExists = false;
+			wfin.close();
 			break;
 		}
+		wfin.close();
 	}
 	if (fileExists)
 	{

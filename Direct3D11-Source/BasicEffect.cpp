@@ -3,7 +3,6 @@
 #include "EffectHelper.h"	// 必须晚于Effects.h和d3dUtil.h包含
 #include "Vertex.h"
 using namespace DirectX;
-using namespace std::experimental;
 
 // 着色器字节码，编译后产生
 #include "HLSL/Basic_VS.inc"
