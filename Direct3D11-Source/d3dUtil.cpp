@@ -9,7 +9,7 @@ HRESULT CreateShaderFromFile(const WCHAR * csoFileNameInOut, const WCHAR * hlslF
 	HRESULT hr = S_OK;
 
 	// 寻找是否有已经编译好的顶点着色器
-	if (csoFileNameInOut && HR(D3DReadFileToBlob(csoFileNameInOut, ppBlobOut)) == S_OK)
+	if (csoFileNameInOut && D3DReadFileToBlob(csoFileNameInOut, ppBlobOut) == S_OK)
 	{
 		return S_OK;
 	}
