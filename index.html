@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <title>Rubik Cube</title>
+    <style>
+        body {
+            margin: 0px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+		
+    </style>
+</head>
+<body>
+    <canvas id="rubik" width="350" height="350"></canvas>
+	
+	<script id="vertex-shader" type="x-shader/x-vertex">
+		// 顶点着色器
+		precision mediump float;	// 将精度设置为中等精度
+		
+		attribute vec3 a_pos;	// 顶点位置
+		attribute vec2 a_tex;	// 顶点纹理
+
+		uniform mat4 u_World;	// 世界矩阵
+		uniform mat4 u_View;	// 观察矩阵
+		uniform mat4 u_Proj;	// 投影矩阵
+
+		varying vec2 v_tex;
+
+		void main() {
+			mat4 worldViewProj = u_Proj * u_View * u_World ;
+			gl_Position = worldViewProj * vec4(a_pos, 1.0);
+			v_tex = a_tex;
+		}
+    </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+		// 片元着色器
+		precision mediump float;	// 将精度设置为中等精度
+
+		uniform sampler2D u_image;	// 纹理
+
+		varying vec2 v_tex;			// 纹理坐标
+
+		void main() {
+			gl_FragColor = texture2D(u_image, v_tex);
+		}
+    </script>
+	<div id="gametime"></div>
+	<div id="xycoordinates"></div>
+	<div id="picking"></div>
+	<div id="helper"></div>
+	<div id="helper2"></div>
+	<div id="author"></div>
+	<button id="finish">一键还原</button>
+	<button id="reset">重新开始</button>
+    <script type="text/javascript" src="libs/webgl-utils.js"></script>
+    <script type="text/javascript" src="libs/shader.js"></script>
+	<script type="text/javascript" src="libs/gl-matrix-min.js"></script>
+	<script type="text/javascript" src="libs/cannon.min.js"></script>
+    <script type="text/javascript" src="rubik.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+
+
+</body>
+</html>
