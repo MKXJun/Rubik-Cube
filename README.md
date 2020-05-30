@@ -4,6 +4,8 @@
 
 **教程链接：[DirectX11--实现一个3D魔方](https://www.cnblogs.com/X-Jun/p/10230580.html)**
 
+**[JavaScript(WebGL)版在线游玩，无教程](https://mkxjun.github.io/Rubik-Cube/)**
+
 ## Direct3D 11.x实现版本 V1.1
 
 语言：C++11/14</br>
